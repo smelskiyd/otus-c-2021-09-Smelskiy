@@ -2,10 +2,14 @@
 
 #include "PKZip.h"
 
+#include <errno.h>
+#include <sys/stat.h>
+
 int main(int argc, char** argv) {
     // Validate input arguments
     if (argc != 2) {
-        printf("Incorrect number of input arguments.\n");
+        printf("Incorrect number of input arguments. "
+               "The program requires exactly 1 argument: the path to the input file.\n");
         return 1;
     }
 
@@ -16,16 +20,18 @@ int main(int argc, char** argv) {
     FILE* input_file;
     input_file = fopen(file_path, "rb");
     if (input_file == NULL) {
-        printf("Can't open the input file. Probably the path is wrong.\n");
-        return 2;
+        perror("Can't open the input file");
+        return errno;
     }
 
     // Determine the file size
-    if (fseek(input_file, 0, SEEK_END) != 0) {
-        printf("Can't fseek\n");
-        return 3;
+    struct stat file_stat;
+    if (stat(file_path, &file_stat) != 0) {
+        perror("Can't get the file stat:");
+        fclose(input_file);
+        return errno;
     }
-    long file_size = ftell(input_file);
+    long file_size = (long)file_stat.st_size;
     printf("File size = %ld\n", file_size);
 
     // Check is there the end of the central directory record
@@ -50,6 +56,7 @@ int main(int argc, char** argv) {
 
     if (start_of_the_ecdr == -1) {
         printf("Can't find the end of central directory record. The file isn't PKZip. \n");
+        fclose(input_file);
         return 0;
     }
 
@@ -75,5 +82,6 @@ int main(int argc, char** argv) {
         }
     }
 
+    fclose(input_file);
     return 0;
 }
