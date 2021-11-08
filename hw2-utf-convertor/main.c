@@ -114,6 +114,7 @@ int main(int argc, char* argv[]) {
     output_file = fopen(output_path, "wb");
     if (output_file == NULL) {
         perror("Can't create or open the output file");
+        fclose(input_file);
         return errno;
     }
 
@@ -126,17 +127,20 @@ int main(int argc, char* argv[]) {
         if (ConvertFromKOI8(input_file, output_file)) {
             successful = 0;
         }
-    } else if (strcmp(encoding, "iso-8859-5") == 0) {
+    } else if (strcmp(encoding, "iso8859-5") == 0) {
         if (ConvertFromISO8859(input_file, output_file)) {
             successful = 0;
         }
     } else {
         printf("Incorrect encoding. "
                "You can only select one of the following encodings: cp-1251, koi8-r, iso8859-5\n");
+        fclose(output_file);
+        fclose(input_file);
         return 1;
     }
 
     fclose(output_file);
+    fclose(input_file);
 
     if (successful) {
         printf("The file is successfully converted to the %s encoding and saved to the file: %s\n",

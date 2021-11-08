@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.20)
 project(OtusHW2_UTFEncoding C)
 
 set(SRC
