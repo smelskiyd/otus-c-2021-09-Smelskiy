@@ -26,6 +26,9 @@ bool CoPrime(size_t x, size_t y) {
 }
 
 size_t GenerateStep(size_t n) {
+    if (n == 1) {
+        return 1;
+    }
     size_t step;
     while (1) {
         size_t cur = (size_t)(rand()) % n + 1;
