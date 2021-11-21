@@ -66,5 +66,7 @@ int main(int argc, char* argv[]) {
 
     DestructHashMap(hash_map);
 
+    fclose(input_file);
+
     return 0;
 }
