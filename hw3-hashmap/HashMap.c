@@ -10,34 +10,18 @@
 
 #include "Hash.h"
 
-static size_t GCD(size_t x, size_t y) {
-    while (x > 0 && y > 0) {
-        if (x > y) {
-            x %= y;
-        } else {
-            y %= x;
+bool IsPrime(size_t n) {
+    for (size_t i = 2; i * i <= n; ++i) {
+        if (n % i == 0) {
+            return false;
         }
     }
-    return x + y;
+    return true;
 }
 
-bool CoPrime(size_t x, size_t y) {
-    return GCD(x, y) == 1;
-}
-
-size_t GenerateStep(size_t n) {
-    if (n == 1) {
-        return 1;
-    }
-    size_t step;
-    while (1) {
-        size_t cur = (size_t)(rand()) % n + 1;
-        if (cur != n) {
-            step = cur;
-            break;
-        }
-    }
-    while (!CoPrime(step, n)) {
+size_t GenerateStep() {
+    size_t step = (size_t)rand();
+    while (!IsPrime(step)) {
         ++step;
     }
     return step;
@@ -62,7 +46,7 @@ HashMap* CreateHashMap(const size_t size) {
     hash_map->size = size;
     hash_map->used_nodes = 0u;
     hash_map->table = (Bucket*)malloc(sizeof(Bucket) * size);
-    hash_map->step = GenerateStep(size);
+    hash_map->step = GenerateStep();
     for (size_t i = 0; i < size; ++i) {
         Bucket* cur_node = &hash_map->table[i];
         // Value -1 represents non-used elements
@@ -77,7 +61,6 @@ void ExpandHashMap(HashMap* hash_map) {
 
     hash_map->size *= 2;
     hash_map->used_nodes = 0u;
-    hash_map->step = GenerateStep(hash_map->size);
 
     hash_map->table = (Bucket*)malloc(sizeof(Bucket) * hash_map->size);
     for (size_t i = 0; i < hash_map->size; ++i) {
