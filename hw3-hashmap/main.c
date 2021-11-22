@@ -8,10 +8,10 @@
 
 #include "HashMap.h"
 
-static const int kMaxWordLength = 255;
+#define BUFFER_LENGTH 256
 
 char* ReadNextWord(FILE* input_file) {
-    static char buffer[kMaxWordLength + 1];
+    static char buffer[BUFFER_LENGTH];
 
     if (fscanf(input_file, "%s", buffer) != 1) {
         return NULL;

@@ -6,6 +6,7 @@
 #define OTUSHW_HASHTABLE_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 static const int kDefaultHashMapSize = 100;
 
@@ -59,7 +60,7 @@ void DestructBucket(Bucket* cell);
  * @param size The initial size of the HashMap
  */
 
-HashMap* CreateHashMap(const size_t size);
+HashMap* CreateHashMap(size_t size);
 
 /*
  * Expand the HashMap. Doubles the size of the HashMap

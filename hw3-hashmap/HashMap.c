@@ -72,12 +72,12 @@ HashMap* CreateHashMap(const size_t size) {
 }
 
 void ExpandHashMap(HashMap* hash_map) {
-    BucketsListNode* words_list = GetAllWords(hash_map);
+    Bucket* old_table = hash_map->table;
+    const size_t old_size = hash_map->size;
+
     hash_map->size *= 2;
     hash_map->used_nodes = 0u;
     hash_map->step = GenerateStep(hash_map->size);
-
-    Bucket* old_table = hash_map->table;
 
     hash_map->table = (Bucket*)malloc(sizeof(Bucket) * hash_map->size);
     for (size_t i = 0; i < hash_map->size; ++i) {
@@ -86,11 +86,15 @@ void ExpandHashMap(HashMap* hash_map) {
         cur_node->cnt = -1;
     }
 
-    while (words_list) {
-        Insert(hash_map, words_list->bucket->word, words_list->bucket->cnt);
-        BucketsListNode* next = words_list->next;
-        free(words_list);
-        words_list = next;
+    for (size_t i = 0; i < old_size; ++i) {
+        Bucket* cur_node = &old_table[i];
+        if (cur_node->cnt > 0) {
+            Insert(hash_map, cur_node->word, cur_node->cnt);
+        } else if (cur_node->cnt == 0) {
+            // This word was added at least once, but was removed the same number of times
+            // So now there are no instances of this word in the HashMap
+            DestructBucket(cur_node);
+        }
     }
 
     free(old_table);
