@@ -120,6 +120,9 @@ void Insert(HashMap* hash_map, char* word, int32_t cnt) {
     } else {
         // Increase the counter for the found instance
         bucket->cnt += cnt;
+        // We need to free the memory allocated for 'word',
+        // because it's already allocated in HashMap
+        free(word);
     }
 
     // Expand HashMap size
