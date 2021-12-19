@@ -15,117 +15,186 @@ GST_DEBUG_CATEGORY_STATIC (gst_wav_player_debug);
 
 enum {
     PROP_0,
-    PROP_SILENT
+    PROP_LOCATION
 };
 
-static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
-                                                                    GST_PAD_SINK,
-                                                                    GST_PAD_ALWAYS,
-                                                                    GST_STATIC_CAPS ("ANY")
-                                                                    );
+#define INPUT_AUDIO_CAPS GST_STATIC_CAPS("audio/x-rav, " \
+                                         "format = S16LE, " \
+                                         "rate = 48000, " \
+                                         "channels = 1, " \
+                                         "endianness = 1234," \
+                                         "depth = 16")
 
-static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
-                                                                   GST_PAD_SRC,
-                                                                   GST_PAD_ALWAYS,
-                                                                   GST_STATIC_CAPS ("ANY")
-                                                                   );
+static GstStaticPadTemplate gst_wav_player_src_template = GST_STATIC_PAD_TEMPLATE(
+        "src", GST_PAD_SRC, GST_PAD_ALWAYS, INPUT_AUDIO_CAPS);
 
 #define gst_wav_player_parent_class parent_class
-G_DEFINE_TYPE (GstWAVPlayer, gst_wav_player, GST_TYPE_ELEMENT);
+G_DEFINE_TYPE (GstWAVPlayer, gst_wav_player, GST_TYPE_PUSH_SRC);
 
+static void gst_wav_player_set_property (GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec);
+static void gst_wav_player_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec);
+static void gst_wav_player_finalize(GObject* object);
+static gboolean gst_wav_player_negotiate(GstBaseSrc* src);
+static gboolean gst_wav_player_start(GstBaseSrc* src);
+static gboolean gst_wav_player_stop(GstBaseSrc* src);
+static gboolean gst_wav_player_query(GstBaseSrc* src, GstQuery* query);
+static GstFlowReturn gst_wav_player_create(GstBaseSrc* src, guint64 offset, guint size, GstBuffer** buf);
 
-static void gst_wav_player_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec);
-static void gst_wav_player_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec);
+static void gst_wav_player_class_init (GstWAVPlayerClass* klass) {
+    GObjectClass* gobject_class;
+    GstBaseSrcClass* gstbasesrc_class;
 
-static gboolean gst_wav_player_sink_event (GstPad * pad, GstObject * parent, GstEvent * event);
-static GstFlowReturn gst_wav_player_chain (GstPad * pad, GstObject * parent, GstBuffer * buf);
-
-
-static void gst_wav_player_class_init (GstWAVPlayerClass * klass) {
-    GObjectClass *gobject_class;
-    GstElementClass *gstelement_class;
-
-    gobject_class = (GObjectClass *) klass;
-    gstelement_class = (GstElementClass *) klass;
+    gobject_class = (GObjectClass*) klass;
+    gstbasesrc_class = (GstBaseSrcClass*) klass;
 
     gobject_class->set_property = gst_wav_player_set_property;
     gobject_class->get_property = gst_wav_player_get_property;
+    gobject_class->finalize = gst_wav_player_finalize;
+    gstbasesrc_class->negotiate = GST_DEBUG_FUNCPTR(gst_wav_player_negotiate);
+    gstbasesrc_class->start = GST_DEBUG_FUNCPTR(gst_wav_player_start);
+    gstbasesrc_class->stop = GST_DEBUG_FUNCPTR(gst_wav_player_stop);
+    gstbasesrc_class->query = GST_DEBUG_FUNCPTR(gst_wav_player_query);
+    gstbasesrc_class->create = GST_DEBUG_FUNCPTR(gst_wav_player_create);
 
-    g_object_class_install_property (gobject_class, PROP_SILENT,
-                                     g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
-                                                           FALSE, G_PARAM_READWRITE));
+    gst_element_class_add_static_pad_template(GST_ELEMENT_CLASS(klass),
+                                              &gst_wav_player_src_template);
 
-    gst_element_class_set_details_simple (gstelement_class,
+    g_object_class_install_property(gobject_class, PROP_LOCATION,
+                                    g_param_spec_string ("location", "Location", "Input file location",
+                                                         "", G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+    gst_element_class_set_details_simple (gstbasesrc_class,
                                           "WAVPlayer",
                                           "FIXME:Generic",
                                           "FIXME:Generic Template Element", " <<user@hostname.org>>");
-
-    gst_element_class_add_pad_template (gstelement_class,
-                                        gst_static_pad_template_get (&src_factory));
-    gst_element_class_add_pad_template (gstelement_class,
-                                        gst_static_pad_template_get (&sink_factory));
 }
 
-static void gst_wav_player_init (GstWAVPlayer * player) {
-    player->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
-    gst_pad_set_event_function (player->sinkpad,
-                                GST_DEBUG_FUNCPTR (gst_wav_player_sink_event));
-    gst_pad_set_chain_function (player->sinkpad,
-                                GST_DEBUG_FUNCPTR (gst_wav_player_chain));
-    GST_PAD_SET_PROXY_CAPS (player->sinkpad);
-    gst_element_add_pad (GST_ELEMENT (player), player->sinkpad);
-
-    player->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
-    GST_PAD_SET_PROXY_CAPS (player->srcpad);
-    gst_element_add_pad (GST_ELEMENT (player), player->srcpad);
-
-    player->silent = FALSE;
+static void gst_wav_player_init(GstWAVPlayer* player) {
+    player->file_location = NULL;
 }
 
-static void gst_wav_player_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec) {
-}
+static void gst_wav_player_set_property(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(object);
 
-static void gst_wav_player_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec) {
-}
+    GST_DEBUG_OBJECT(wav_player, "set_property");
 
-static gboolean gst_wav_player_sink_event(GstPad * pad, GstObject * parent, GstEvent * event) {
-    GstWAVPlayer *player;
-    gboolean ret;
-
-    player = GST_WAVPLAYER (parent);
-
-    GST_LOG_OBJECT (player, "Received %s event: %" GST_PTR_FORMAT,
-                    GST_EVENT_TYPE_NAME (event), event);
-
-    switch (GST_EVENT_TYPE (event)) {
-        case GST_EVENT_CAPS:
-        {
-            GstCaps *caps;
-            gst_event_parse_caps (event, &caps);
-            /* do something with the caps */
-            /* and forward */
-            ret = gst_pad_event_default (pad, parent, event);
+    switch (prop_id) {
+        case PROP_LOCATION:
+            wav_player->file_location = g_strdup(g_value_get_string(value));
             break;
-        }
+
         default:
-            ret = gst_pad_event_default (pad, parent, event);
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
             break;
     }
+}
+
+static void gst_wav_player_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(object);
+
+    GST_DEBUG_OBJECT(wav_player, "get_property");
+
+    switch (prop_id) {
+        case PROP_LOCATION:
+            g_value_set_string(value, wav_player->file_location);
+            break;
+
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
+            break;
+    }
+}
+
+void gst_wav_player_finalize(GObject* object) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(object);
+
+    GST_DEBUG_OBJECT(wav_player, "finalize");
+
+    G_OBJECT_CLASS(gst_wav_player_parent_class)->finalize(object);
+}
+
+static gboolean gst_wav_player_negotiate(GstBaseSrc* src) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(src);
+
+    GST_DEBUG_OBJECT(wav_player, "negotiate");
+
+    return TRUE;
+}
+
+static gboolean gst_wav_player_start(GstBaseSrc* src) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(src);
+
+    GST_DEBUG_OBJECT(wav_player, "start");
+    GST_DEBUG_OBJECT(wav_player, "location=%s", wav_player->file_location);
+
+    return TRUE;
+}
+
+static gboolean gst_wav_player_stop(GstBaseSrc* src) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(src);
+
+    GST_DEBUG_OBJECT(wav_player, "stop");
+
+    if (wav_player->file_location != NULL) {
+        g_free(wav_player->file_location);
+        wav_player->file_location = NULL;
+    }
+
+    return TRUE;
+}
+
+static gboolean gst_wav_player_query(GstBaseSrc* src, GstQuery* query) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(src);
+
+    GST_DEBUG_OBJECT(wav_player, "query %s",
+                     gst_query_type_get_name(GST_QUERY_TYPE(query)));
+
+    gboolean ret = GST_BASE_SRC_CLASS(gst_wav_player_parent_class)->query(src, query);
+
     return ret;
 }
 
-static GstFlowReturn gst_wav_player_chain (GstPad * pad, GstObject * parent, GstBuffer * buf) {
-    GstWAVPlayer *player;
-
-    player = GST_WAVPLAYER(parent);
-
-    if (player->silent == FALSE)
-        g_print ("I'm plugged, therefore I'm in.\n");
-
-    return gst_pad_push (player->srcpad, buf);
+static gsize gst_wav_player_read_next_data(gint16** data) {
+    *data = g_malloc(1 * sizeof(gint16));
+    (*data)[0] = 1;
+    return 1;
 }
 
-static gboolean wavplayer_init (GstPlugin * player) {
+static GstBuffer* gst_wav_player_process(GstWAVPlayer* wav_player, guint64 offset,
+                                         guint size) {
+    GstBuffer* buffer;
+    buffer = gst_buffer_new();
+//    GstCaps* caps;
+  //  caps = gst_static_pad_template_get_caps(&gst_wav_player_src_template);
+    //gst_buffer_set_caps(buffer, caps);
+
+    gint16* data;
+    g_assert(data);
+    gsize realsize;
+    realsize = gst_wav_player_read_next_data(&data);
+
+    GstMemory* memory = gst_memory_new_wrapped(0, data, realsize, 0, realsize, data, g_free);
+    g_assert(memory);
+
+    gst_buffer_insert_memory(buffer, -1, memory);
+    return buffer;
+}
+
+static GstFlowReturn gst_wav_player_create(GstBaseSrc* src, guint64 offset,
+                                           guint size, GstBuffer** buf) {
+    GstWAVPlayer* wav_player = (GstWAVPlayer*)(src);
+
+    GST_DEBUG_OBJECT(wav_player, "create");
+
+    if (wav_player->file_location == NULL) {
+        exit(1);
+    }
+
+    *buf = gst_wav_player_process(wav_player, offset, size);
+    return GST_FLOW_OK;
+}
+
+static gboolean wavplayer_init (GstPlugin* player) {
     GST_DEBUG_CATEGORY_INIT (gst_wav_player_debug, "wavplayer",
                              0, "Template wavplayer");
     return gst_element_register (player, "wavplayer", GST_RANK_NONE,
