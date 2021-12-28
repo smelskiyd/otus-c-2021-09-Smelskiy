@@ -1,0 +1,6 @@
+[submodule "hw5-libcurl-weather-forecast/3d-party/curl"]
+	path = hw5-libcurl-weather-forecast/3d-party/curl
+	url = git@github.com:curl/curl.git
+[submodule "hw5-libcurl-weather-forecast/3d-party/jansson"]
+	path = hw5-libcurl-weather-forecast/3d-party/jansson
+	url = git@github.com:akheron/jansson.git
