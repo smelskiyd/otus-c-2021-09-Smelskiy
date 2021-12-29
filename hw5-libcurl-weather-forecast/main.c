@@ -87,6 +87,10 @@ MemoryStruct* ReadWeatherData(CURL* curl_handle) {
     return chunk;
 }
 
+void PrintWeatherInfo(MemoryStruct* chunk) {
+    printf("%s\n", chunk->memory);
+}
+
 int main(int argc, char** argv) {
     curl_global_init(CURL_GLOBAL_ALL);
 
@@ -111,6 +115,8 @@ int main(int argc, char** argv) {
     }
 
     printf("Weather data was read successfully\n");
+
+    PrintWeatherInfo(chunk);
 
     free(chunk->memory);
     curl_easy_cleanup(curl_handle);

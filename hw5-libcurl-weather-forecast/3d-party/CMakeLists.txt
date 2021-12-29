@@ -7,10 +7,3 @@ set(JANSSON_WITHOUT_TESTS ON CACHE BOOL "Disable building tests for Jansson" FOR
 set(JANSSON_INSTALL OFF CACHE BOOL "Disable installation for Jansson" FORCE)
 set(JANSSON_EXAMPLES OFF CACHE BOOL "Disable building examples for Jansson" FORCE)
 add_subdirectory(jansson)
-
-find_library(JANSSON_LIB NAMES jansson REQUIRED)
-if (${JANSSON_LIB})
-    message(STATUS "FOUND")
-else()
-    message(STATUS "NOT FOUND")
-endif()

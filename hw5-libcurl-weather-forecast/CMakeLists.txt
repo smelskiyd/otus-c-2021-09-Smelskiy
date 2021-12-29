@@ -8,4 +8,5 @@ add_executable(OtusHW5_WeatherForecast main.c)
 target_compile_options(OtusHW5_WeatherForecast PRIVATE -Wall -Wextra -Wpedantic -std=c11)
 target_link_libraries(OtusHW5_WeatherForecast PRIVATE -lcurl)
 
-target_link_libraries(OtusHW5_WeatherForecast PUBLIC jansson)
+target_include_directories(OtusHW5_WeatherForecast PRIVATE ${JANSSON_INCLUDE_DIRS})
+target_link_libraries(OtusHW5_WeatherForecast PRIVATE jansson)
