@@ -3,7 +3,10 @@ project(OtusHW5_WeatherForecast C)
 
 add_subdirectory(3d-party)
 
-add_executable(OtusHW5_WeatherForecast main.c)
+set(SRC
+        ReadURLData.h   ReadURLData.c)
+
+add_executable(OtusHW5_WeatherForecast main.c ${SRC})
 
 target_compile_options(OtusHW5_WeatherForecast PRIVATE -Wall -Wextra -Wpedantic -std=c11)
 target_link_libraries(OtusHW5_WeatherForecast PRIVATE -lcurl)
