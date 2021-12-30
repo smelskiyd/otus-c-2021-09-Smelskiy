@@ -7,12 +7,21 @@
 #include <string.h>
 
 #include "ReadURLData.h"
-#include "jansson.h"
+#include "JSONVisualizer.h"
 
-const char* kWeatherURL = "https://www.metaweather.com/api/";
+const char* kWeatherURL = "https://www.metaweather.com/api/location/44418/";
 
-void PrintWeatherInfo(MemoryStruct* chunk) {
-    printf("%s\n", chunk->memory);
+void PrintWeatherInfo(const char* weather_data) {
+    json_t* root = NULL;
+    json_error_t error;
+    root = json_loads(weather_data, 0, &error);
+    if (root) {
+        RecursivelyPrintJson(root, 0);
+        json_decref(root);
+    } else {
+        fprintf(stderr, "Failed to read JSON file. Error on line %d: %s", error.line, error.text);
+        exit(1);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -29,7 +38,7 @@ int main(int argc, char** argv) {
 
     printf("Weather data was read successfully\n");
 
-    PrintWeatherInfo(chunk);
+    PrintWeatherInfo(chunk->memory);
 
     free(chunk->memory);
     free(chunk);

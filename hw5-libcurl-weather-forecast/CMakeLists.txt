@@ -4,7 +4,8 @@ project(OtusHW5_WeatherForecast C)
 add_subdirectory(3d-party)
 
 set(SRC
-        ReadURLData.h   ReadURLData.c)
+        ReadURLData.h       ReadURLData.c
+        JSONVisualizer.h    JSONVisualizer.c)
 
 add_executable(OtusHW5_WeatherForecast main.c ${SRC})
 

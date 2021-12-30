@@ -67,6 +67,9 @@ MemoryStruct* ReadURLData(const char* url) {
 
     if (chunk == NULL || chunk->memory == NULL) {
         fprintf(stderr, "Failed to allocate memory data");
+        if (chunk != NULL) {
+            free(chunk);
+        }
         curl_easy_cleanup(curl_handle);
         exit(1);
     }
