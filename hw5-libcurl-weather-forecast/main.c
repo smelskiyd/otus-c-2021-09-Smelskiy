@@ -9,7 +9,8 @@
 #include "ReadURLData.h"
 #include "JSONVisualizer.h"
 
-const char* kWeatherURL = "https://www.metaweather.com/api/location/44418/";
+// Weather-Forecast API URL
+const char* kWeatherAPIURL = "https://www.metaweather.com/api/location/";
 
 void PrintWeatherInfo(const char* weather_data) {
     json_t* root = NULL;
@@ -25,10 +26,19 @@ void PrintWeatherInfo(const char* weather_data) {
 }
 
 int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Wrong number of input arguments. "
+                        "Program requires exactly 1 input argument: "
+                        "location name (e.g. 'moscow', 'london', etc)");
+        exit(1);
+    }
+    const char* location = argv[1];
+    printf("Location: %s\n", location);
+
     curl_global_init(CURL_GLOBAL_ALL);
 
     MemoryStruct* chunk = NULL;
-    chunk = ReadURLData(kWeatherURL);
+    chunk = ReadURLData(kWeatherAPIURL);
 
     if (chunk == NULL) {
         fprintf(stderr, "Failed to read data from URL");
