@@ -18,6 +18,7 @@ MemoryStruct* CreateMemoryStruct(size_t size) {
     return memory;
 }
 
+// Append 'contents' to 'userp' memory data
 size_t WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     size_t real_size = size * nmemb;
     MemoryStruct* mem = (MemoryStruct*)userp;
@@ -83,6 +84,11 @@ MemoryStruct* ReadURLData(const char* url) {
     if (res != CURLE_OK) {
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
+        curl_easy_cleanup(curl_handle);
+        if (chunk->memory) {
+            free(chunk->memory);
+        }
+        free(chunk);
         exit(1);
     } else {
         printf("%lu bytes retrieved\n", (unsigned long)chunk->size);

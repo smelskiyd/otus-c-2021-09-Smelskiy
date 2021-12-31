@@ -19,7 +19,7 @@ const char* kWeatherAPIURL = "https://www.metaweather.com/api/location/";
 // It is used to find location WOEID
 const char* kLocationInfoURL = "https://www.metaweather.com/api/location/search/?query=";
 
-char* AppendWOEIDToURL(char* url, int woeid) {
+char* AppendWOEIDToURL(const char* url, int woeid) {
     char* num;
     asprintf(&num, "%d", woeid);
 
@@ -29,13 +29,16 @@ char* AppendWOEIDToURL(char* url, int woeid) {
     strncat(result, url, strlen(url));
     strncat(result, num, strlen(num));
 
+    // Append '\' to the end of the URL
     result[strlen(url) + strlen(num)] = '/';
+    // Append null character to the end of the C-string
     result[strlen(url) + strlen(num) + 1] = '\0';
 
     free(num);
     return result;
 }
 
+// Parse JSON object to get WOEID value
 int GetWOEIDFromJson(json_t* root) {
     if (!json_is_array(root)) {
         return -1;
@@ -54,7 +57,7 @@ int GetWOEIDFromJson(json_t* root) {
     if (!json_is_integer(woeid_json_value)) {
         return -1;
     }
-    return json_integer_value(woeid_json_value);
+    return (int)json_integer_value(woeid_json_value);
 }
 
 void PrintWeatherInfo(const char* weather_data) {
@@ -72,6 +75,7 @@ void PrintWeatherInfo(const char* weather_data) {
     }
 }
 
+// Download location info from URL in JSON format
 int FindWOEID(const char* location) {
     char buffer[256] = {'\0'};
     snprintf(buffer, strlen(kLocationInfoURL) + 1, "%s", kLocationInfoURL);
@@ -81,8 +85,11 @@ int FindWOEID(const char* location) {
     MemoryStruct* chunk = NULL;
     chunk = ReadURLData(buffer);
 
-    if (chunk == NULL) {
+    if (chunk == NULL || chunk->memory == NULL) {
         fprintf(stderr, "Failed to read data from %s\n", buffer);
+        if (chunk) {
+            free(chunk);
+        }
         curl_global_cleanup();
         exit(1);
     }

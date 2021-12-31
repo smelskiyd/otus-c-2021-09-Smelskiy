@@ -86,7 +86,7 @@ void RecursivelyPrintJson(json_t* root, int indent) {
     } else if (json_is_null(root)) {
         PrintJsonNull();
     } else {
-        fprintf(stderr, "Wrong JSON format");
+        fprintf(stderr, "Failed to print JSON tree: wrong format");
         exit(1);
     }
 }

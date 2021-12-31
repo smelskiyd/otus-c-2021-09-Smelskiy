@@ -14,8 +14,6 @@ typedef struct {
 
 MemoryStruct* CreateMemoryStruct(size_t size);
 
-static size_t WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void* userp);
-
 CURL* CreateCurlHandler();
 
 MemoryStruct* ReadURLData(const char* url);
