@@ -51,6 +51,7 @@ CURL* CreateCurlHandler() {
 }
 
 MemoryStruct* ReadURLData(const char* url) {
+    printf("Reading data from %s\n", url);
     CURL* curl_handle = NULL;
     curl_handle = CreateCurlHandler();
 

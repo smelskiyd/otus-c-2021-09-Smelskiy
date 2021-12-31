@@ -10,15 +10,100 @@
 #include "JSONVisualizer.h"
 
 // Weather-Forecast API URL
+// Append WOEID of the location to get weather forecast URL for this location
+// For instance: "https://www.metaweather.com/api/location/44418"
 const char* kWeatherAPIURL = "https://www.metaweather.com/api/location/";
+
+// Get location info for string name of the location
+// For instance: "https://www.metaweather.com/api/location/search/?query=london"
+// It is used to find location WOEID
+const char* kLocationInfoURL = "https://www.metaweather.com/api/location/search/?query=";
+
+char* AppendWOEIDToURL(char* url, int woeid) {
+    char* num;
+    asprintf(&num, "%d", woeid);
+
+    char* result = malloc(strlen(url) + strlen(num) + 2);
+    *result = '\0';
+
+    strncat(result, url, strlen(url));
+    strncat(result, num, strlen(num));
+
+    result[strlen(url) + strlen(num)] = '/';
+    result[strlen(url) + strlen(num) + 1] = '\0';
+
+    free(num);
+    return result;
+}
+
+int GetWOEIDFromJson(json_t* root) {
+    if (!json_is_array(root)) {
+        return -1;
+    }
+    if (json_array_size(root) != 1) {
+        return -1;
+    }
+    json_t* root_object = json_array_get(root, 0);
+    if (!json_is_object(root_object)) {
+        return -1;
+    }
+    json_t* woeid_json_value = json_object_get(root_object, "woeid");
+    if (!woeid_json_value) {
+        return -1;
+    }
+    if (!json_is_integer(woeid_json_value)) {
+        return -1;
+    }
+    return json_integer_value(woeid_json_value);
+}
 
 void PrintWeatherInfo(const char* weather_data) {
     json_t* root = NULL;
     json_error_t error;
     root = json_loads(weather_data, 0, &error);
     if (root) {
+        printf("Weather info:\n");
         RecursivelyPrintJson(root, 0);
+        printf("\n");
         json_decref(root);
+    } else {
+        fprintf(stderr, "Failed to read JSON file. Error on line %d: %s", error.line, error.text);
+        exit(1);
+    }
+}
+
+int FindWOEID(const char* location) {
+    char buffer[256] = {'\0'};
+    snprintf(buffer, strlen(kLocationInfoURL) + 1, "%s", kLocationInfoURL);
+    snprintf(buffer + strlen(kLocationInfoURL), strlen(location) + 1, "%s", location);
+    buffer[strlen(kLocationInfoURL) + strlen(location)] = '\0';
+
+    MemoryStruct* chunk = NULL;
+    chunk = ReadURLData(buffer);
+
+    if (chunk == NULL) {
+        fprintf(stderr, "Failed to read data from %s\n", buffer);
+        curl_global_cleanup();
+        exit(1);
+    }
+
+    json_t* root = NULL;
+    json_error_t error;
+    root = json_loads(chunk->memory, 0, &error);
+
+    free(chunk->memory);
+    free(chunk);
+
+    if (root) {
+        int woeid = GetWOEIDFromJson(root);
+        if (woeid == -1) {
+            fprintf(stderr, "Failed to get WOEID of %s, from %s\n", location, buffer);
+            exit(1);
+        }
+        printf("WOEID of %s = %d\n", location, woeid);
+
+        json_decref(root);
+        return woeid;
     } else {
         fprintf(stderr, "Failed to read JSON file. Error on line %d: %s", error.line, error.text);
         exit(1);
@@ -37,16 +122,17 @@ int main(int argc, char** argv) {
 
     curl_global_init(CURL_GLOBAL_ALL);
 
+    int woeid = FindWOEID(location);
+    char* url_with_woeid = AppendWOEIDToURL(kWeatherAPIURL, woeid);
+
     MemoryStruct* chunk = NULL;
-    chunk = ReadURLData(kWeatherAPIURL);
+    chunk = ReadURLData(url_with_woeid);
 
     if (chunk == NULL) {
         fprintf(stderr, "Failed to read data from URL");
         curl_global_cleanup();
         return 1;
     }
-
-    printf("Weather data was read successfully\n");
 
     PrintWeatherInfo(chunk->memory);
 
