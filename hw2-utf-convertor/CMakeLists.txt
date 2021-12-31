@@ -9,5 +9,3 @@ set(SRC
         )
 
 add_executable(OtusHW2_UTFEncoding main.c ${SRC})
-
-target_compile_options(OtusHW2_UTFEncoding PUBLIC -Wall -Wextra -Wpedantic -std=c11)

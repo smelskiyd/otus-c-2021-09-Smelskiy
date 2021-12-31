@@ -6,5 +6,3 @@ set(SRC
         HashMap.h   HashMap.c)
 
 add_executable(OtusHW3_HashMap main.c ${SRC})
-
-target_compile_options(OtusHW3_HashMap PUBLIC -Wall -Wextra -Wpedantic -std=c11)
