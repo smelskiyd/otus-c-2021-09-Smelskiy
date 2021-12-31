@@ -12,4 +12,4 @@ add_executable(OtusHW5_WeatherForecast main.c ${SRC})
 target_link_libraries(OtusHW5_WeatherForecast PRIVATE -lcurl)
 
 target_include_directories(OtusHW5_WeatherForecast PRIVATE ${JANSSON_INCLUDE_DIRS})
-target_link_libraries(OtusHW5_WeatherForecast PRIVATE jansson)
+target_link_libraries(OtusHW5_WeatherForecast PRIVATE ${JANSSON_LIBRARIES})

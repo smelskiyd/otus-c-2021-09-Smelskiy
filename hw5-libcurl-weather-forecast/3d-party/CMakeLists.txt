@@ -1,4 +1,6 @@
 # LibCURL
+set(CURL_DISABLE_VERBOSE_STRINGS ON CACHE BOOL "Disable verbose strings for CURL" FORCE)
+set(CURL_DISABLE_TESTS ON CACHE BOOL "Disable building tests for CURL" FORCE)
 add_subdirectory(curl)
 
 # Jansson - easy to use JSON parser for C
