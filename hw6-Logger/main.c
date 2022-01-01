@@ -10,7 +10,8 @@ int main(int argc, char** argv) {
     FILE* output_file;
     output_file = fopen("./tmp_file", "wb");
     set_output_log_file(output_file);
-    PRINT_LOG_INFO("%s", "info log");
+    PRINT_LOG_INFO("%s", "info log\n");
     reset_output_log_file();
-    PRINT_LOG_WARN("%s", "warning log");
+    PRINT_LOG_WARN("%s", "warning log\n");
+    PRINT_LOG_ERROR("%s", "error log\n");
 }

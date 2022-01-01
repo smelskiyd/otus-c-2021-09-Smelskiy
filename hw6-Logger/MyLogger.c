@@ -16,6 +16,7 @@
 static const LogLevel kDefaultLogLevel = LEVEL_DEBUG;
 static LogLevel global_log_level = kDefaultLogLevel;
 
+// NULL represents a default output stream: stderr for ERROR and FATAL levels, and stdout for others
 static FILE* output_log_file = NULL;
 
 void set_global_log_level(const LogLevel log_level) {
@@ -36,12 +37,15 @@ void set_output_log_file(FILE* output_file) {
 }
 
 void reset_output_log_file() {
-    output_log_file = stdout;
+    output_log_file = NULL;
 }
 
-FILE* get_output_log_file() {
+FILE* get_output_log_file(const LogLevel log_level) {
     if (output_log_file == NULL) {
-        output_log_file = stdout;
+        if (log_level == LEVEL_ERROR || log_level == LEVEL_FATAL) {
+            return stderr;
+        }
+        return stdout;
     }
     return output_log_file;
 }
@@ -80,7 +84,7 @@ void print_log(const char* file_name, int line,
 
     va_list arg_list;
     va_start(arg_list, log_format);
-    FILE* output_file = get_output_log_file();
+    FILE* output_file = get_output_log_file(log_level);
     if (vfprintf(output_file, format, arg_list) < 0) {
         fprintf(stderr, "Failed to write log to output file\n");
     }
