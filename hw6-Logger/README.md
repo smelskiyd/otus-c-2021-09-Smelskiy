@@ -2,5 +2,5 @@
 
 ### TODO
 - Add backtrace for FATAL level logs
-- Add new line character if log message doesn't have it at the end
 - Add API description
+- Add log level to log message

@@ -51,9 +51,37 @@ FILE* get_output_log_file(const LogLevel log_level) {
 }
 
 char* get_log_header(const char* file_name, int line) {
+    // TODO: print level prefix
     static char buf[MAX_HEADER_LOG_LENGTH];
     sprintf(buf, "%s, %d: ", file_name, line);
     return buf;
+}
+
+char* get_format_string(const char* file_name, int line, const LogLevel log_level,
+                        const char* const log_format) {
+    char* header = NULL;
+    header = get_log_header(file_name, line);
+    if (header == NULL) {
+        return NULL;
+    }
+    size_t header_length = strlen(header);
+
+    size_t format_length = strlen(log_format);
+    size_t log_length = header_length + format_length + 2;
+
+    char* format = NULL;
+    format = (char*)malloc(log_length);
+    if (format == NULL) {
+        fprintf(stderr, "Failed to allocate memory for log with length %zu\n", log_length);
+        return NULL;
+    }
+
+    strncpy(format, header, header_length);
+    strncpy(format + header_length, log_format, strlen(log_format));
+    format[header_length + format_length] = '\n';
+    format[log_length - 1] = '\0';
+
+    return format;
 }
 
 void print_log(const char* file_name, int line,
@@ -62,33 +90,15 @@ void print_log(const char* file_name, int line,
         return;
     }
 
-    char* header = NULL;
-    header = get_log_header(file_name, line);
-    if (header == NULL) {
-        return;
-    }
-    size_t header_length = strlen(header);
-
-    size_t format_length = strlen(log_format);
-    size_t log_length = header_length + format_length + 1;
-
-    char* format = NULL;
-    format = (char*)malloc(log_length);
-    if (format == NULL) {
-        fprintf(stderr, "Failed to allocate memory for log with length %zu\n", log_length);
-        return;
-    }
-
-    strncpy(format, header, header_length);
-    strncpy(format + header_length, log_format, strlen(log_format));
+    char* format_string = get_format_string(file_name, line, log_level, log_format);
 
     va_list arg_list;
     va_start(arg_list, log_format);
     FILE* output_file = get_output_log_file(log_level);
-    if (vfprintf(output_file, format, arg_list) < 0) {
+    if (vfprintf(output_file, format_string, arg_list) < 0) {
         fprintf(stderr, "Failed to write log to output file\n");
     }
     va_end(arg_list);
 
-    free(format);
+    free(format_string);
 }
