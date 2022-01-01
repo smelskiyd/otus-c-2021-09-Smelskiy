@@ -19,8 +19,11 @@ typedef enum {
 
 void set_global_log_level(LogLevel log_level);
 LogLevel get_global_log_level();
-
 bool is_enabled_log_level(LogLevel log_level);
+
+void set_output_log_file(FILE* output_file);
+void reset_output_log_file();
+FILE* get_output_log_file();
 
 void print_log(const char* file_name, int line, LogLevel log_level, const char* format, ...);
 

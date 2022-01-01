@@ -16,6 +16,8 @@
 static const LogLevel kDefaultLogLevel = LEVEL_DEBUG;
 static LogLevel global_log_level = kDefaultLogLevel;
 
+static FILE* output_log_file = NULL;
+
 void set_global_log_level(const LogLevel log_level) {
     global_log_level = log_level;
 }
@@ -27,6 +29,21 @@ LogLevel get_global_log_level() {
 bool is_enabled_log_level(const LogLevel log_level) {
     return log_level != LEVEL_OFF &&
            (int)log_level >= (int)get_global_log_level();
+}
+
+void set_output_log_file(FILE* output_file) {
+    output_log_file = output_file;
+}
+
+void reset_output_log_file() {
+    output_log_file = stdout;
+}
+
+FILE* get_output_log_file() {
+    if (output_log_file == NULL) {
+        output_log_file = stdout;
+    }
+    return output_log_file;
 }
 
 char* get_log_header(const char* file_name, int line) {
@@ -54,7 +71,7 @@ void print_log(const char* file_name, int line,
     char* format = NULL;
     format = (char*)malloc(log_length);
     if (format == NULL) {
-        fprintf(stderr, "Failed to allocate memory for log with length %zu", log_length);
+        fprintf(stderr, "Failed to allocate memory for log with length %zu\n", log_length);
         return;
     }
 
@@ -63,7 +80,10 @@ void print_log(const char* file_name, int line,
 
     va_list arg_list;
     va_start(arg_list, log_format);
-    vfprintf(stdout, format, arg_list);
+    FILE* output_file = get_output_log_file();
+    if (vfprintf(output_file, format, arg_list) < 0) {
+        fprintf(stderr, "Failed to write log to output file\n");
+    }
     va_end(arg_list);
 
     free(format);
