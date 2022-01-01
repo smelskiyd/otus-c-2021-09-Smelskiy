@@ -11,11 +11,13 @@ typedef enum {
     LEVEL_TRACE = 0,
     LEVEL_DEBUG,
     LEVEL_INFO,
-    LEVEL_WARN,
+    LEVEL_WARNING,
     LEVEL_ERROR,
     LEVEL_FATAL,
     LEVEL_OFF
 } LogLevel;
+
+char* convert_level_to_string(LogLevel level);
 
 void set_global_log_level(LogLevel log_level);
 LogLevel get_global_log_level();
@@ -33,8 +35,8 @@ void print_log(const char* file_name, int line, LogLevel log_level, const char* 
     print_log(__FILE__, __LINE__, LEVEL_DEBUG, __VA_ARGS__)
 #define PRINT_LOG_INFO(...) \
     print_log(__FILE__, __LINE__, LEVEL_INFO, __VA_ARGS__)
-#define PRINT_LOG_WARN(...) \
-    print_log(__FILE__, __LINE__, LEVEL_WARN, __VA_ARGS__)
+#define PRINT_LOG_WARNING(...) \
+    print_log(__FILE__, __LINE__, LEVEL_WARNING, __VA_ARGS__)
 #define PRINT_LOG_ERROR(...) \
     print_log(__FILE__, __LINE__, LEVEL_ERROR, __VA_ARGS__)
 #define PRINT_LOG_FATAL(...) \

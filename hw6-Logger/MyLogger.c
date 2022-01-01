@@ -19,6 +19,28 @@ static LogLevel global_log_level = kDefaultLogLevel;
 // NULL represents a default output stream: stderr for ERROR and FATAL levels, and stdout for others
 static FILE* output_log_file = NULL;
 
+char* convert_level_to_string(LogLevel level) {
+    switch (level) {
+        case LEVEL_TRACE:
+            return "TRACE";
+        case LEVEL_DEBUG:
+            return "DEBUG";
+        case LEVEL_INFO:
+            return "INFO";
+        case LEVEL_WARNING:
+            return "WARNING";
+        case LEVEL_ERROR:
+            return "ERROR";
+        case LEVEL_FATAL:
+            return "FATAL";
+        case LEVEL_OFF:
+            return "OFF";
+        default:
+            fprintf(stderr, "Failed to convert LogLevel to string: %d\n", (int)level);
+            return "UNDEFINED";
+    }
+}
+
 void set_global_log_level(const LogLevel log_level) {
     global_log_level = log_level;
 }
@@ -50,17 +72,16 @@ FILE* get_output_log_file(const LogLevel log_level) {
     return output_log_file;
 }
 
-char* get_log_header(const char* file_name, int line) {
-    // TODO: print level prefix
+char* get_log_header(const char* file_name, int line, const LogLevel log_level) {
     static char buf[MAX_HEADER_LOG_LENGTH];
-    sprintf(buf, "%s, %d: ", file_name, line);
+    sprintf(buf, "%s: %s, %d: ", convert_level_to_string(log_level), file_name, line);
     return buf;
 }
 
 char* get_format_string(const char* file_name, int line, const LogLevel log_level,
                         const char* const log_format) {
     char* header = NULL;
-    header = get_log_header(file_name, line);
+    header = get_log_header(file_name, line, log_level);
     if (header == NULL) {
         return NULL;
     }

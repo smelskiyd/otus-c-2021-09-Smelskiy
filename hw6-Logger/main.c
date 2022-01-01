@@ -12,6 +12,6 @@ int main(int argc, char** argv) {
     set_output_log_file(output_file);
     PRINT_LOG_INFO("%s", "info log");
     reset_output_log_file();
-    PRINT_LOG_WARN("%s", "warning log");
+    PRINT_LOG_WARNING("%s", "warning log");
     PRINT_LOG_ERROR("%s", "error log");
 }
