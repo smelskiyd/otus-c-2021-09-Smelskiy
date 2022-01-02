@@ -11,7 +11,7 @@
 #include "MyLogger.h"
 
 #ifndef MAX_HEADER_LOG_LENGTH
-    #define MAX_HEADER_LOG_LENGTH 256
+    #define MAX_HEADER_LOG_LENGTH 150
 #endif
 
 #ifndef MAX_BACKTRACE_SIZE

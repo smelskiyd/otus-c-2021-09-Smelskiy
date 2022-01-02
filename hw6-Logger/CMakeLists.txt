@@ -6,7 +6,7 @@ set(SRC
 
 add_library(MyLogger STATIC ${SRC})
 
-set(MAX_HEADER_LOG_LENGTH 256)
+set(MAX_HEADER_LOG_LENGTH 150)
 set(MAX_BACKTRACE_SIZE 100)
 target_compile_definitions(MyLogger PUBLIC -DMAX_HEADER_LOG_LENGTH=${MAX_HEADER_LOG_LENGTH})
 target_compile_definitions(MyLogger PUBLIC -DMAX_BACKTRACE_SIZE=${MAX_BACKTRACE_SIZE})
