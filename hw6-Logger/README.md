@@ -3,4 +3,3 @@
 ### TODO
 - Add API description
 - Add tests / examples
-- Add LINUX ifdefs

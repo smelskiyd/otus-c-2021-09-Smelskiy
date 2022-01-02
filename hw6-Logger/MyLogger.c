@@ -129,6 +129,7 @@ void print_log(const char* file_name, int line,
     free(format_string);
 }
 
+#if defined(__unix__) || defined(__APPLE__)
 void print_backtrace(FILE* output_file) {
     void* buffer[MAX_BACKTRACE_SIZE];
     int size = backtrace(buffer, MAX_BACKTRACE_SIZE);
@@ -143,6 +144,11 @@ void print_backtrace(FILE* output_file) {
     }
     free(buffer_symbols);
 }
+#else
+void print_backtrace(FILE* output_file) {
+    #warning "Backtrace isn't implemented for this operating system"
+}
+#endif
 
 void print_fatal_log(const char* file_name, int line,
                      const LogLevel log_level, const char* const log_format, ...) {
