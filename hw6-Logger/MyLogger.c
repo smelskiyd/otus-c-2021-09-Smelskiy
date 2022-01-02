@@ -79,6 +79,7 @@ FILE* get_output_log_file(const LogLevel log_level) {
 
 char* get_log_header(const char* file_name, int line, const LogLevel log_level) {
     static char buf[MAX_HEADER_LOG_LENGTH];
+    // TODO(@smelskiyd): Add timestamp to header
     sprintf(buf, "%s: %s, %d: ", convert_level_to_string(log_level), file_name, line);
     return buf;
 }
