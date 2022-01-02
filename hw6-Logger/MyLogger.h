@@ -17,8 +17,6 @@ typedef enum {
     LEVEL_OFF
 } LogLevel;
 
-char* convert_level_to_string(LogLevel level);
-
 void set_global_log_level(LogLevel log_level);
 LogLevel get_global_log_level();
 bool is_enabled_log_level(LogLevel log_level);
