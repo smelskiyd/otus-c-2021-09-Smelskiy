@@ -27,7 +27,10 @@ void set_output_log_file(FILE* output_file);
 void reset_output_log_file();
 FILE* get_output_log_file(LogLevel log_level);
 
+void print_backtrace(FILE* output_file);
+
 void print_log(const char* file_name, int line, LogLevel log_level, const char* format, ...);
+void print_fatal_log(const char* file_name, int line, LogLevel log_level, const char* format, ...);
 
 #define PRINT_LOG_TRACE(...) \
     print_log(__FILE__, __LINE__, LEVEL_TRACE, __VA_ARGS__)
@@ -40,6 +43,6 @@ void print_log(const char* file_name, int line, LogLevel log_level, const char* 
 #define PRINT_LOG_ERROR(...) \
     print_log(__FILE__, __LINE__, LEVEL_ERROR, __VA_ARGS__)
 #define PRINT_LOG_FATAL(...) \
-    print_log(__FILE__, __LINE__, LEVEL_FATAL, __VA_ARGS__)
+    print_fatal_log(__FILE__, __LINE__, LEVEL_FATAL, __VA_ARGS__)
 
 #endif //OTUSHW_MYLOGGER_H

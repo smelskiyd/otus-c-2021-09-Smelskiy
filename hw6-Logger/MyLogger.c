@@ -6,12 +6,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <execinfo.h>
 
 #include "MyLogger.h"
 
 #ifndef MAX_HEADER_LOG_LENGTH
     #define MAX_HEADER_LOG_LENGTH 256
 #endif
+
+#define BT_BUF_SIZE 100
 
 static const LogLevel kDefaultLogLevel = LEVEL_DEBUG;
 static LogLevel global_log_level = kDefaultLogLevel;
@@ -122,4 +125,42 @@ void print_log(const char* file_name, int line,
     va_end(arg_list);
 
     free(format_string);
+}
+
+void print_backtrace(FILE* output_file) {
+    void* buffer[BT_BUF_SIZE];
+    int size = backtrace(buffer, BT_BUF_SIZE);
+    char** buffer_symbols = backtrace_symbols(buffer, size);
+    if (buffer_symbols == NULL) {
+        perror("backtrace_symbols");
+        exit(1);
+    }
+
+    for (int i = 0; i < size; ++i) {
+        fprintf(output_file, "%s\n", buffer_symbols[i]);
+    }
+    free(buffer_symbols);
+}
+
+void print_fatal_log(const char* file_name, int line,
+                     const LogLevel log_level, const char* const log_format, ...) {
+    if (!is_enabled_log_level(log_level)) {
+        return;
+    }
+
+    char* format_string = get_format_string(file_name, line, log_level, log_format);
+
+    va_list arg_list;
+    va_start(arg_list, log_format);
+    FILE* output_file = get_output_log_file(log_level);
+    if (vfprintf(output_file, format_string, arg_list) < 0) {
+        fprintf(stderr, "Failed to write log to output file\n");
+    }
+    va_end(arg_list);
+
+    print_backtrace(output_file);
+
+    free(format_string);
+
+    exit(1);
 }
