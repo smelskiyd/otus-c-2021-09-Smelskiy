@@ -11,18 +11,20 @@ struct Node {
     size_t value;
     struct Node* next;
 };
-
 typedef struct Node Node;
 
+// Print 64-bit value
 void print_int(size_t value) {
     printf("%ld ", value);
     fflush(stdout);
 }
 
+// Check whether the value is odd
 size_t p(size_t value) {
     return (value & 1ull);
 }
 
+// Add new list element as the previous node to the 'next' node
 Node* add_element(size_t value, Node* next) {
     Node* cur_node = NULL;
     cur_node = (Node*)(malloc(sizeof(Node)));
@@ -35,6 +37,7 @@ Node* add_element(size_t value, Node* next) {
     return cur_node;
 }
 
+// Recursively print list
 void m(Node* node, void(*print_function)(size_t)) {
     if (node == NULL) {
         return;
@@ -43,6 +46,7 @@ void m(Node* node, void(*print_function)(size_t)) {
     m(node->next, print_function);
 }
 
+// Copy the odd values to the new list in reverse order
 Node* f(Node* node, Node* odd_numbers_list, size_t(*predicate)(size_t)) {
     if (node == NULL) {
         return odd_numbers_list;
@@ -61,12 +65,15 @@ int main() {
         initial_list = add_element(value, initial_list);
     }
 
+    // Print initial list
     m(initial_list, print_int);
     putc('\n', stdout);
 
+    // Copy the odd values to the new list in reverse order
     Node* odd_values_list = NULL;
     odd_values_list = f(initial_list, odd_values_list, p);
 
+    // Print result list
     m(odd_values_list, print_int);
     putc('\n', stdout);
 
