@@ -24,3 +24,6 @@ PRINT_LOG_FATAL("%.3f", 123.123f);
 - Use ```set_global_log_level(LogLevel)``` to set logging level (DEBUG by default)
 
 - Use ```set_output_log_file(FILE*)``` to print logs to the file
+
+## Example
+- See ```logger_example.c``` file for usage examples
