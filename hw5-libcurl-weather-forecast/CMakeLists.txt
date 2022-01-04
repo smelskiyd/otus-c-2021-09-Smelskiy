@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.15)
 project(OtusHW5_WeatherForecast C)
 
 add_subdirectory(3d-party)
