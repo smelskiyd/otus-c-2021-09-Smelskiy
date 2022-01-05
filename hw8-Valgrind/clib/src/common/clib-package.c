@@ -997,12 +997,10 @@ cleanup:
 #ifdef HAVE_PTHREADS
 static void *fetch_package_file_thread(void *arg) {
   fetch_package_file_thread_data_t *data = arg;
-  int *status = malloc(sizeof(int));
   int rc =
       fetch_package_file_work(data->pkg, data->dir, data->file, data->verbose);
-  *status = rc;
   (void)data->pkg->refs--;
-  pthread_exit((void *)status);
+  pthread_exit(NULL);
   return (void *)rc;
 }
 #endif

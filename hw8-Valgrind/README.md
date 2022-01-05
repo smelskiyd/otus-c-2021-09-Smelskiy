@@ -45,3 +45,38 @@
 ==25567==    still reachable: 41,801 bytes in 12 blocks
 
 ==25567==         suppressed: 0 bytes in 0 blocks
+
+
+
+## Fix #2: pthread_exit(status) status argument must be created in another thread 
+276 bytes in 69 blocks are definitely lost in loss record 42 of 111
+
+==29529==    at 0x4C31B0F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+
+==29529==    by 0x11EC73: fetch_package_file_thread (clib-package.c:1000)
+
+==29529==    by 0x50C56DA: start_thread (pthread_create.c:463)
+
+==29529==    by 0x53FE71E: clone (clone.S:95)
+
+### Leak summary before fix:
+==29529==    definitely lost: 378 bytes in 83 blocks
+
+==29529==    indirectly lost: 0 bytes in 0 blocks
+
+==29529==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==29529==    still reachable: 41,801 bytes in 12 blocks
+
+==29529==         suppressed: 0 bytes in 0 blocks
+
+### Leak summary after fix:
+==5167==    definitely lost: 102 bytes in 14 blocks
+
+==5167==    indirectly lost: 0 bytes in 0 blocks
+
+==5167==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==5167==    still reachable: 41,801 bytes in 12 blocks
+
+==5167==         suppressed: 0 bytes in 0 blocks
