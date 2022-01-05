@@ -1,0 +1,47 @@
+# Fix memory leaks using Valgrind
+
+## Fix #1: we need to call custom deleter for 'http_get_response_t' variable, before 'goto'
+### Leak backtrace
+==24838== 1,128 (768 direct, 360 indirect) bytes in 24 blocks are definitely lost in loss record 80 of 143
+
+==24838==    at 0x4C31B0F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+
+==24838==    by 0x128550: http_get_shared (http-get.c:46)
+
+==24838==    by 0x11DDC3: clib_package_new_from_slug_with_package_name (clib-package.c:660)
+
+==24838==    by 0x11E438: clib_package_new_from_slug (clib-package.c:796)
+
+==24838==    by 0x11CF10: install_packages (clib-package.c:370)
+
+==24838==    by 0x1209C1: clib_package_install_dependencies (clib-package.c:1615)
+
+==24838==    by 0x120874: clib_package_install (clib-package.c:1579)
+
+==24838==    by 0x11CF31: install_packages (clib-package.c:374)
+
+==24838==    by 0x1209C1: clib_package_install_dependencies (clib-package.c:1615)
+
+==24838==    by 0x120874: clib_package_install (clib-package.c:1579)
+
+==24838==    by 0x11B724: main (package-install.c:84)
+### Leak summary before fix :
+==24933==    definitely lost: 2,554 bytes in 151 blocks
+
+==24933==    indirectly lost: 1,020 bytes in 68 blocks
+
+==24933==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==24933==    still reachable: 41,801 bytes in 12 blocks
+
+==24933==         suppressed: 0 bytes in 0 blocks
+### Leak summary after fix :
+==25567==    definitely lost: 378 bytes in 83 blocks
+
+==25567==    indirectly lost: 0 bytes in 0 blocks
+
+==25567==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==25567==    still reachable: 41,801 bytes in 12 blocks
+
+==25567==         suppressed: 0 bytes in 0 blocks
