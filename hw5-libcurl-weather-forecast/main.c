@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+#include <stdbool.h>
 
 #include "ReadURLData.h"
 #include "JSONVisualizer.h"
@@ -18,6 +20,30 @@ const char* kWeatherAPIURL = "https://www.metaweather.com/api/location/";
 // For instance: "https://www.metaweather.com/api/location/search/?query=london"
 // It is used to find location WOEID
 const char* kLocationInfoURL = "https://www.metaweather.com/api/location/search/?query=";
+
+json_t* GetValueFromObject(json_t* object, const char* key) {
+    json_t* value = json_object_get(object, key);
+    assert(value != NULL && "Failed to find key in object");
+    return value;
+}
+
+const char* GetStringFromObject(json_t* object, const char* key) {
+    json_t* value = GetValueFromObject(object, key);
+    assert(json_is_string(value) && "Failed to load string from json_t");
+    return json_string_value(value);
+}
+
+int GetIntFromObject(json_t* object, const char* key) {
+    json_t* value = GetValueFromObject(object, key);
+    assert(json_is_integer(value) && "Failed to load integer from json_t");
+    return json_integer_value(value);
+}
+
+float GetRealFromObject(json_t* object, const char* key) {
+    json_t* value = GetValueFromObject(object, key);
+    assert(json_is_real(value) && "Failed to load real from json_t");
+    return json_real_value(value);
+}
 
 char* AppendWOEIDToURL(const char* url, int woeid) {
     char* num;
@@ -60,15 +86,51 @@ int GetWOEIDFromJson(json_t* root) {
     return (int)json_integer_value(woeid_json_value);
 }
 
-void PrintWeatherInfo(const char* weather_data) {
+void PrintWeatherInfo(const char* weather_data, bool print_raw_format) {
     json_t* root = NULL;
     json_error_t error;
     root = json_loads(weather_data, 0, &error);
-    if (root) {
-        printf("Weather info:\n");
+    if (root && print_raw_format) {
         RecursivelyPrintJson(root, 0);
-        printf("\n");
         json_decref(root);
+        printf("\n");
+    } else if (root) {
+        printf("--------------------------------------------\n");
+
+        printf("\t\t\tWeather info\n");
+
+        {   // Print location info
+            json_t* parent_obj = json_object_get(root, "parent");
+            assert(parent_obj != NULL && "Failed to find 'parent' object");
+            printf("Location: %s, %s\n", GetStringFromObject(root, "title"),
+                                         GetStringFromObject(parent_obj, "title"));
+            printf("Timezone: %s\n", GetStringFromObject(root, "timezone_name"));
+        }
+
+        json_t* consolidated_weather_arr = json_object_get(root, "consolidated_weather");
+        assert(consolidated_weather_arr != NULL && "Failed to get consolidated_weather array");
+        for (size_t i = 0; i < json_array_size(consolidated_weather_arr); ++i) {
+            printf("--------------------------------------------\n");
+            json_t *weather_info_obj = json_array_get(consolidated_weather_arr, i);
+            {   // Print data
+                printf("\tDate: %s\n", GetStringFromObject(weather_info_obj, "applicable_date"));
+            }
+            {   // Print weather
+                printf("Weather state: %s\n", GetStringFromObject(weather_info_obj, "weather_state_name"));
+                printf("Wind: speed = %.2f, direction = %s\n",
+                       GetRealFromObject(weather_info_obj, "wind_speed"),
+                       GetStringFromObject(weather_info_obj, "wind_direction_compass"));
+                printf("Temperature: current = %.1f (min = %.1f, max = %.1f)\n",
+                       GetRealFromObject(weather_info_obj, "the_temp"),
+                       GetRealFromObject(weather_info_obj, "min_temp"),
+                       GetRealFromObject(weather_info_obj, "max_temp"));
+                printf("Air pressure: %.1f\n", GetRealFromObject(weather_info_obj, "air_pressure"));
+                printf("Humidity: %d\n", GetIntFromObject(weather_info_obj, "humidity"));
+                printf("Visibility: %f\n", GetRealFromObject(weather_info_obj, "visibility"));
+                printf("Predictability: %d\n", GetIntFromObject(weather_info_obj, "predictability"));
+            }
+        }
+        printf("--------------------------------------------\n");
     } else {
         fprintf(stderr, "Failed to read JSON file. Error on line %d: %s", error.line, error.text);
         exit(1);
@@ -142,7 +204,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    PrintWeatherInfo(chunk->memory);
+    PrintWeatherInfo(chunk->memory, false);
 
     free(chunk->memory);
     free(chunk);
