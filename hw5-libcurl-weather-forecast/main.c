@@ -134,6 +134,7 @@ int main(int argc, char** argv) {
 
     MemoryStruct* chunk = NULL;
     chunk = ReadURLData(url_with_woeid);
+    free(url_with_woeid);
 
     if (chunk == NULL) {
         fprintf(stderr, "Failed to read data from URL");
