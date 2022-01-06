@@ -15,6 +15,9 @@ inline void
 hash_set(hash_t *self, char *key, void *val) {
   int ret;
   khiter_t k = kh_put(ptr, self, key, &ret);
+  if (ret == 0) {
+      free(key);
+  }
   kh_value(self, k) = val;
 }
 

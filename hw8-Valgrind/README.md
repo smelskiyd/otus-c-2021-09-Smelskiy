@@ -80,3 +80,50 @@
 ==5167==    still reachable: 41,801 bytes in 12 blocks
 
 ==5167==         suppressed: 0 bytes in 0 blocks
+
+
+## Fix #3: Clear key in hash_set if there already exist an instance with such key
+
+==10210== 57 bytes in 7 blocks are definitely lost in loss record 25 of 110
+
+==10210==    at 0x4C31B0F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+
+==10210==    by 0x140871: strdup (strdup.c:24)
+
+==10210==    by 0x11FF3E: clib_package_install (clib-package.c:1382)
+
+==10210==    by 0x11CF31: install_packages (clib-package.c:374)
+
+==10210==    by 0x1209B0: clib_package_install_dependencies (clib-package.c:1614)
+
+==10210==    by 0x120863: clib_package_install (clib-package.c:1578)
+
+==10210==    by 0x11CF31: install_packages (clib-package.c:374)
+
+==10210==    by 0x1209B0: clib_package_install_dependencies (clib-package.c:1614)
+
+==10210==    by 0x120863: clib_package_install (clib-package.c:1578)
+
+==10210==    by 0x11B724: main (package-install.c:84)
+
+### Leak summary before fix:
+==10210==    definitely lost: 102 bytes in 14 blocks
+
+==10210==    indirectly lost: 0 bytes in 0 blocks
+
+==10210==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==10210==    still reachable: 41,801 bytes in 12 blocks
+
+==10210==         suppressed: 0 bytes in 0 blocks
+
+### Leak summary after fix:
+==4214==    definitely lost: 0 bytes in 0 blocks
+
+==4214==    indirectly lost: 0 bytes in 0 blocks
+
+==4214==      possibly lost: 49,591,680 bytes in 337,788 blocks
+
+==4214==    still reachable: 41,801 bytes in 12 blocks
+
+==4214==         suppressed: 0 bytes in 0 blocks
