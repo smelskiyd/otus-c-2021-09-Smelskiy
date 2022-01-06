@@ -131,6 +131,7 @@ void PrintWeatherInfo(const char* weather_data, bool print_raw_format) {
             }
         }
         printf("--------------------------------------------\n");
+        json_decref(root);
     } else {
         fprintf(stderr, "Failed to read JSON file. Error on line %d: %s", error.line, error.text);
         exit(1);
