@@ -14,7 +14,8 @@ typedef enum {
     LEVEL_WARNING,
     LEVEL_ERROR,
     LEVEL_FATAL,
-    LEVEL_OFF
+    LEVEL_OFF,
+    LEVELS_COUNT
 } LogLevel;
 
 /*

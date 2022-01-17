@@ -24,26 +24,14 @@ static LogLevel global_log_level = kDefaultLogLevel;
 // NULL represents a default output stream: stderr for ERROR and FATAL levels, and stdout for others
 static FILE* output_log_file = NULL;
 
-char* convert_level_to_string(LogLevel level) {
-    switch (level) {
-        case LEVEL_TRACE:
-            return "TRACE";
-        case LEVEL_DEBUG:
-            return "DEBUG";
-        case LEVEL_INFO:
-            return "INFO";
-        case LEVEL_WARNING:
-            return "WARNING";
-        case LEVEL_ERROR:
-            return "ERROR";
-        case LEVEL_FATAL:
-            return "FATAL";
-        case LEVEL_OFF:
-            return "OFF";
-        default:
-            fprintf(stderr, "Failed to convert LogLevel to string: %d\n", (int)level);
-            return "UNDEFINED";
+const char* convert_level_to_string(LogLevel level) {
+    static const char* const kLevelToStr[LEVELS_COUNT] =
+            {"TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "FATAL", "OFF"};
+    if ((int)level >= LEVELS_COUNT) {
+        fprintf(stderr, "Error: undefined log level: %d\n", (int)level);
+        return "UNDEFINED";
     }
+    return kLevelToStr[(int)level];
 }
 
 void set_global_log_level(const LogLevel log_level) {
@@ -132,7 +120,7 @@ void print_log(const char* file_name, int line,
 
 #if defined(__unix__) || defined(__APPLE__)
 void print_backtrace(FILE* output_file) {
-    void* buffer[MAX_BACKTRACE_SIZE];
+    static void* buffer[MAX_BACKTRACE_SIZE];
     int size = backtrace(buffer, MAX_BACKTRACE_SIZE);
     char** buffer_symbols = backtrace_symbols(buffer, size);
     if (buffer_symbols == NULL) {

@@ -38,6 +38,8 @@ void LoggingToFile() {
     PRINT_LOG_WARNING("%s", "warning log");
     PRINT_LOG_ERROR("%s", "error log");
     A();
+
+    fclose(output_log_file);
 }
 
 int main(int argc, char** argv) {
