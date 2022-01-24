@@ -1,3 +1,2 @@
-# Find CRC32 sum of a pretty large file 
-2377501422
-3735928559
+# Find CRC32 sum of a file
+Program requires exactly one input argument: input file path.
