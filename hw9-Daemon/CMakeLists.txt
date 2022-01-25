@@ -1,6 +1,9 @@
 project(OtusHW9_MyDaemon C)
 
-set(SRC
+set(MYDAEMON_SRC
         FileInfoMonitoring.h    FileInfoMonitoring.c)
 
-add_executable(OtusHW9_MyDaemon MyDaemon.c ${SRC})
+add_executable(OtusHW9_MyDaemon MyDaemon.c ${MYDAEMON_SRC})
+
+add_executable(OtusHW9_TestClient TestClient.c)
+add_executable(OtusHW9_Server Server.c)
