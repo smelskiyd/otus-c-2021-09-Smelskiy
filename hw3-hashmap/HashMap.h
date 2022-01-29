@@ -63,6 +63,15 @@ void DestructBucket(Bucket* cell);
 HashMap* CreateHashMap(size_t size);
 
 /*
+ * Merge two HashMaps and save the result in first HashMap.
+ * In other words, all values from second HashMap are added to the first HashMap
+ * @param fir First HashMap
+ * @param sec Second HashMap
+ * @return Returns the result of the merge (pointer to first HashMap)
+ */
+HashMap* MergeHashMaps(HashMap* fir, HashMap* sec);
+
+/*
  * Expand the HashMap. Doubles the size of the HashMap
  * @param hash_map The input HashMap to expand
  */

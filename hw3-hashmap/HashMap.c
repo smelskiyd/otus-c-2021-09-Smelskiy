@@ -55,6 +55,26 @@ HashMap* CreateHashMap(const size_t size) {
     return hash_map;
 }
 
+HashMap* MergeHashMaps(HashMap* fir, HashMap* sec) {
+    BucketsListNode* words_list;
+    words_list = GetAllWords(sec);
+
+    while (words_list != NULL) {
+        char* word = words_list->bucket->word;
+        char* word_copy = NULL;
+        word_copy = (char*)(malloc(strlen(word) + 1));
+        strncpy(word_copy, word, strlen(word) + 1);
+
+        Insert(fir, word_copy, words_list->bucket->cnt);
+
+        BucketsListNode* next = words_list->next;
+        free(words_list);
+        words_list = next;
+    }
+
+    return fir;
+}
+
 void ExpandHashMap(HashMap* hash_map) {
     Bucket* old_table = hash_map->table;
     const size_t old_size = hash_map->size;
