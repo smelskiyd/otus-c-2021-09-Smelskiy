@@ -4,22 +4,19 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <syslog.h>
 
+#include "FileInfoMonitoring.h"
+
 /*
  * Daemonize current program
  */
-void Daemonize(const char* program_name) {
-    /*
-     * Initialize logging
-     */
-    openlog(program_name, LOG_CONS, LOG_DAEMON);
-
+void Daemonize() {
     /*
      * Reset initial process mask
      */
@@ -104,6 +101,20 @@ void Daemonize(const char* program_name) {
 }
 
 int main(int argc, char** argv) {
-    Daemonize(argv[0]);
-    sleep(100);
+    if (argc != 2) {
+        fprintf(stderr, "Wrong number of input arguments.\n"
+                        "Program requires exactly one argument: path to the input file for monitoring");
+        return 1;
+    }
+
+    /*
+     * Initialize logging
+     */
+    openlog(argv[0], LOG_CONS, LOG_DAEMON);
+
+    const char* file_path = argv[1];
+    StartMonitoring(file_path);
+
+//    Daemonize();
+  //  sleep(100);
 }
