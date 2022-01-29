@@ -17,7 +17,7 @@ static const int kDefaultHashMapSize = 100;
  */
 typedef struct {
     char* word;
-    int32_t cnt;
+    long long cnt;
 } Bucket;
 
 /*
@@ -101,7 +101,7 @@ Bucket* Find(HashMap* hash_map, char* word);
  * @param word The word which want to insert
  * @param cnt The number of word occurrences
  */
-void Insert(HashMap* hash_map, char* word, int32_t cnt);
+void Insert(HashMap* hash_map, char* word, long long cnt);
 
 /*
  * Remove the single occurrence of the word from the HashMap

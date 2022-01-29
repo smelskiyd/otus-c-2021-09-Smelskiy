@@ -9,9 +9,12 @@
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
+#include <limits.h>
 
 #include "FileList.h"
 #include "LogsProcessor.h"
+
+#define TOP_N 10
 
 FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     DIR* dir = NULL;
@@ -39,8 +42,92 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     return last_file_node;
 }
 
+void SortTopInstances(Bucket* top[], size_t length) {
+    // Bubble sort
+    for (size_t i = 0; i < length; ++i) {
+        for (size_t j = i + 1; j < length; ++j) {
+            if (top[j] != NULL) {
+                // Swap, if needed
+                if (top[i] == NULL) {
+                    top[i] = top[j];
+                    top[j] = NULL;
+                } else if (top[j]->cnt > top[i]->cnt) {
+                    Bucket* tmp = top[j];
+                    top[j] = top[i];
+                    top[i] = tmp;
+                }
+            }
+        }
+    }
+}
+
+void GetTopInstances(Bucket* top[], size_t length, HashMap* hash_map) {
+    BucketsListNode* buckets;
+    buckets = GetAllWords(hash_map);
+    while (buckets != NULL) {
+        long long min_cnt = LLONG_MAX;
+        int pos = -1;
+        for (size_t i = 0; i < length; ++i) {
+            if (top[i] == NULL) {
+                min_cnt = 0;
+                pos = (int)i;
+                break;
+            } else if (top[i]->cnt < min_cnt) {
+                min_cnt = top[i]->cnt;
+                pos = (int)i;
+            }
+        }
+
+        if (pos != -1) {
+            Bucket* bucket_copy = (Bucket*)malloc(sizeof(Bucket));
+            bucket_copy->cnt = buckets->bucket->cnt;
+            char* word = buckets->bucket->word;
+            bucket_copy->word = (char*)(malloc(strlen(word) + 1));
+            strncpy(bucket_copy->word, word, strlen(word) + 1);
+
+            if (top[pos] != NULL) {
+                DestructBucket(top[pos]);
+            }
+            top[pos] = bucket_copy;
+        }
+
+        BucketsListNode* next = buckets->next;
+        free(buckets);
+        buckets = next;
+    }
+
+    SortTopInstances(top, length);
+}
+
 void PrintResults(const LogsProcessorResult* result) {
     printf("Program processed %zu logs\n", result->total_logs_processed);
+    printf("Total number of returned bytes: %zu\n", result->total_bytes_send);
+
+    Bucket* top_urls[TOP_N];
+    for (size_t i = 0; i < TOP_N; ++i) {
+        top_urls[i] = NULL;
+    }
+    GetTopInstances(top_urls, TOP_N, result->url_counter);
+    printf("Top URLs:\n");
+    for (size_t i = 0; i < TOP_N; ++i) {
+        if (top_urls[i] != NULL) {
+            printf("- %s [total weight = %lld]\n", top_urls[i]->word, top_urls[i]->cnt);
+            DestructBucket(top_urls[i]);
+        }
+    }
+
+    Bucket* top_referers[TOP_N];
+    for (size_t i = 0; i < TOP_N; ++i) {
+        top_referers[i] = NULL;
+    }
+    GetTopInstances(top_referers, TOP_N, result->referers_counter);
+    printf("Top referers:\n");
+    for (size_t i = 0; i < TOP_N; ++i) {
+        if (top_referers[i] != NULL) {
+            printf("- %s [total mentions = %lld]\n", top_referers[i]->word, top_referers[i]->cnt);
+            DestructBucket(top_referers[i]);
+        }
+    }
 }
 
 void RunParallelProcessing(size_t n_threads, FileWithMutex* files, size_t files_n) {
@@ -74,6 +161,7 @@ void RunParallelProcessing(size_t n_threads, FileWithMutex* files, size_t files_
     for (size_t i = 0; i < n_threads; ++i) {
         CombineTwoResults(&total_result, &processors_result[i]);
         printf("Thread %zu has processed %zu logs\n", i, processors_result[i].total_logs_processed);
+        DestroyLogsProcessorResult(&processors_result[i]);
     }
     free(processors_result);
 

@@ -6,13 +6,17 @@
 #define OTUSHW_LOGSPROCESSOR_H
 
 #include "FileWithMutex.h"
+#include "HashMap.h"
 
 typedef struct {
     size_t total_logs_processed;
     size_t total_bytes_send;
+    HashMap* url_counter;
+    HashMap* referers_counter;
 } LogsProcessorResult;
 
 void InitLogsProcessorResult(LogsProcessorResult* result);
+void DestroyLogsProcessorResult(LogsProcessorResult* result);
 void CombineTwoResults(LogsProcessorResult* fir, const LogsProcessorResult* sec);
 
 typedef struct {

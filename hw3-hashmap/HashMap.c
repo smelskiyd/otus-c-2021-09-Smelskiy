@@ -126,7 +126,7 @@ Bucket* Find(HashMap* hash_map, char* word) {
     return NULL;
 }
 
-void Insert(HashMap* hash_map, char* word, int32_t cnt) {
+void Insert(HashMap* hash_map, char* word, long long cnt) {
     Bucket* bucket = Find(hash_map, word);
     if (bucket == NULL) {
         printf("Can't insert new word in HashTable\n");

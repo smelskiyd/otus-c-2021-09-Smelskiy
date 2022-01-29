@@ -7,24 +7,47 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "CombinedLog.h"
 
 #define LOGS_BUFFER_LIMIT 100
 
+char* CopyString(char* src) {
+    char* result = NULL;
+    result = (char*)(malloc(strlen(src) + 1));
+    strncpy(result, src, strlen(src) + 1);
+    return result;
+}
+
 void InitLogsProcessorResult(LogsProcessorResult* result) {
     result->total_logs_processed = 0;
     result->total_bytes_send = 0;
+    result->url_counter = CreateHashMap(kDefaultHashMapSize);
+    result->referers_counter = CreateHashMap(kDefaultHashMapSize);
+}
+
+void DestroyLogsProcessorResult(LogsProcessorResult* result) {
+    DestructHashMap(result->url_counter);
+    DestructHashMap(result->referers_counter);
 }
 
 void CombineTwoResults(LogsProcessorResult* fir, const LogsProcessorResult* sec) {
     fir->total_logs_processed += sec->total_logs_processed;
     fir->total_bytes_send += sec->total_bytes_send;
+    MergeHashMaps(fir->url_counter, sec->url_counter);
+    MergeHashMaps(fir->referers_counter, sec->referers_counter);
 }
 
 void UpdateProcessStats(LogsProcessorResult* processor_result, CombinedLog* log) {
+    long long return_size = StringToInteger(log->return_size);
+
     processor_result->total_logs_processed++;
-    processor_result->total_bytes_send += StringToInteger(log->return_size);
+    processor_result->total_bytes_send += return_size;
+    char* url = CopyString(log->request_line);
+    Insert(processor_result->url_counter, url, return_size);
+    char* referer = CopyString(log->referer);
+    Insert(processor_result->referers_counter, referer, 1);
 }
 
 void ProcessLogs(LogsProcessorResult* processor_result, char** lines_to_process, size_t lines_cnt) {
