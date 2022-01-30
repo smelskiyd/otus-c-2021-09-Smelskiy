@@ -13,7 +13,7 @@ FileNode* InsertNode(FileNode* list_head, char* file_path) {
     return new_node;
 }
 
-void FreeList(FileNode* list_head) {
+void DestroyList(FileNode* list_head) {
     while (list_head != NULL) {
         FileNode* next = list_head->next;
         free(list_head->file_path);

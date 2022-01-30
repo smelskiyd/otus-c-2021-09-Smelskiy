@@ -16,7 +16,7 @@ struct FileNode {
 
 FileNode* InsertNode(FileNode* list_head, char* file_path);
 
-void FreeList(FileNode* list_head);
+void DestroyList(FileNode* list_head);
 
 size_t CountListSize(FileNode* list_head);
 

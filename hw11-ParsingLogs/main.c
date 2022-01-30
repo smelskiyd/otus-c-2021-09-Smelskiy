@@ -181,7 +181,7 @@ void Process(const char* input_dir_path, size_t n_threads) {
         FileWithMutex* cur = &files[i];
         FileWithMutexInit(cur, head->file_path);
     }
-    FreeList(list_of_files);
+    DestroyList(list_of_files);
 
     RunParallelProcessing(n_threads, files, files_n);
 

@@ -8,6 +8,13 @@
 #include <string.h>
 #include <stdio.h>
 
+/*
+ * Skip first 'skip_first' symbols and read until the stop_symbol
+ * @param p Pointer to the pointer to the first not processed character
+ * @param stop_symbol Stop symbol
+ * @param skip_first Number of symbols to skip
+ * @return Result string
+ */
 // p - pointer to the pointer to the first not processed character
 char* ReadUntil(char** p, char stop_symbol, int skip_first) {
     if (p == NULL || (*p == NULL)) {
@@ -30,7 +37,7 @@ char* ReadUntil(char** p, char stop_symbol, int skip_first) {
         }
     }
 
-    char* result = (char*)(malloc((len + 1) * sizeof(char)));
+    char* result = (char*)(malloc(len + 1));
 
     for (size_t i = 0; i < len; ++i, ++(*p)) {
         result[i] = (**p);
@@ -90,7 +97,7 @@ long long StringToInteger(const char* str) {
         fprintf(stderr, "Failed to convert string to integer: empty string");
         exit(0);
     }
-    long long result = 0;
+    long long result;
     result = strtol(str, NULL, 0);
     return result;
 }

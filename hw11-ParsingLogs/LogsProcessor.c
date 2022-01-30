@@ -11,7 +11,7 @@
 
 #include "CombinedLog.h"
 
-#define LOGS_BUFFER_LIMIT 100
+#define LOGS_BUFFER_LIMIT 1000
 
 char* CopyString(char* src) {
     char* result = NULL;
@@ -25,6 +25,11 @@ void InitLogsProcessorResult(LogsProcessorResult* result) {
     result->total_bytes_send = 0;
     result->url_counter = CreateHashMap(kDefaultHashMapSize);
     result->referers_counter = CreateHashMap(kDefaultHashMapSize);
+
+    if (result->url_counter == NULL || result->referers_counter == NULL) {
+        fprintf(stderr, "Failed to initialize LogsProcessorResult\n");
+        exit(1);
+    }
 }
 
 void DestroyLogsProcessorResult(LogsProcessorResult* result) {
@@ -39,22 +44,34 @@ void CombineTwoResults(LogsProcessorResult* fir, const LogsProcessorResult* sec)
     MergeHashMaps(fir->referers_counter, sec->referers_counter);
 }
 
+// Adds info about new 'log' into processor results
 void UpdateProcessStats(LogsProcessorResult* processor_result, CombinedLog* log) {
     long long return_size = StringToInteger(log->return_size);
 
     processor_result->total_logs_processed++;
     processor_result->total_bytes_send += return_size;
+
+    // Increase the total weight of 'url'
     char* url = CopyString(log->request_line);
     Insert(processor_result->url_counter, url, return_size);
+
+    // Increment the number of occurrences of 'referer'
     char* referer = CopyString(log->referer);
     Insert(processor_result->referers_counter, referer, 1);
 }
 
+/*
+ * Gets new not processed lines, parses it as logs, and updates thread results
+ * @param processors_result Processor results
+ * @param lines_to_process Array of new (not processed) lines
+ * @param lines_cnt The length of the array 'lines_to_process'
+ */
 void ProcessLogs(LogsProcessorResult* processor_result, char** lines_to_process, size_t lines_cnt) {
     for (size_t i = 0; i < lines_cnt; ++i) {
         char* current_line = lines_to_process[i];
         CombinedLog* log = ParseCombinedLog(current_line);
         free(current_line);
+
         if (log == NULL) {
             fprintf(stderr, "Failed to parse log from file\n");
             continue;
@@ -66,6 +83,15 @@ void ProcessLogs(LogsProcessorResult* processor_result, char** lines_to_process,
     }
 }
 
+/*
+ * Read 'buffer_limit' lines from the input file, while it's owned by this thread
+ * @param input_file Input file
+ * @param buffer Array where to save new lines
+ * @param buffer_length The length of the array 'buffer' (number of stored lines)
+ * @param buffer_limit The capacity of the array 'buffer' (maximum number of lines)
+ * @return Return true if file was finished after reading new lines.
+ *         Return false if file isn't finished.
+ */
 bool ReadLogsPackage(FILE* input_file, char* buffer[], size_t* buffer_length, size_t buffer_limit) {
     bool file_has_finished = false;
     while ((*buffer_length) < buffer_limit) {
@@ -94,6 +120,7 @@ void* SingleThreadProcess(void* arguments) {
     while (true) {
         int file_id = FindReadyFileAndLock(files, files_n);
         if (file_id < 0) {
+            // All files are finished
             break;
         }
         bool file_has_finished = ReadLogsPackage(files[file_id].file, buffer, &buffer_length, LOGS_BUFFER_LIMIT);

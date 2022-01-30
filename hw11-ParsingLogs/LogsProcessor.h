@@ -8,6 +8,7 @@
 #include "FileWithMutex.h"
 #include "HashMap.h"
 
+// TODO: Change to 'LogsProcessorResults'
 typedef struct {
     size_t total_logs_processed;
     size_t total_bytes_send;
@@ -17,6 +18,13 @@ typedef struct {
 
 void InitLogsProcessorResult(LogsProcessorResult* result);
 void DestroyLogsProcessorResult(LogsProcessorResult* result);
+
+/*
+ * Merges two instances of LogsProcessorResult and saves the result in 'fir'.
+ * In other words all data from second instance is added to the first one.
+ * @param fir First instance of LogsProcessorResult
+ * @param sec Second instance of LogsProcessorResults
+ */
 void CombineTwoResults(LogsProcessorResult* fir, const LogsProcessorResult* sec);
 
 typedef struct {

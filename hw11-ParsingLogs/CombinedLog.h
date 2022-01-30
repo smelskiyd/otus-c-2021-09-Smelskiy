@@ -23,6 +23,7 @@ typedef struct {
 } CombinedLog;
 
 void InitCombinedLog(CombinedLog* log);
+// Rename as DestructCombinedLog
 void FreeCombinedLog(CombinedLog* log);
 
 CombinedLog* ParseCombinedLog(char* str);
