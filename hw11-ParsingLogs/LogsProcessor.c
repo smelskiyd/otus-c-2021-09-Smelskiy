@@ -95,10 +95,11 @@ void ProcessLogs(LogsStatistics* processor_results, char** lines_to_process, siz
 bool ReadLogsPackage(FILE* input_file, char* buffer[], size_t* buffer_length, size_t buffer_limit) {
     bool file_has_finished = false;
     while ((*buffer_length) < buffer_limit) {
-        size_t tmp;
+        size_t tmp = 0;
         buffer[*buffer_length] = NULL;
         ssize_t status = getline(&buffer[*buffer_length], &tmp, input_file);
         if (status < 0) {
+            free(buffer[*buffer_length]);
             file_has_finished = true;
             break;
         }

@@ -29,6 +29,7 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     while ((node = readdir(dir)) != NULL) {
         if (node->d_type == DT_REG) {
             char* full_path = (char*)(malloc(strlen(input_dir_path) + 1 + strlen(node->d_name) + 1));
+            full_path[0] = '\0';
             full_path = strcat(full_path, input_dir_path);
             full_path = strcat(full_path, "/");
             full_path = strcat(full_path, node->d_name);
@@ -144,6 +145,7 @@ void Process(const char* input_dir_path, size_t n_threads) {
     PrintResults(result);
 
     DestroyLogsStatistics(result);
+    free(result);
     DestroyList(list_of_files);
 }
 
