@@ -7,15 +7,15 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>
 #include <time.h>
 #include <limits.h>
 
 #include "FileList.h"
-#include "LogsProcessor.h"
+#include "ParallelLogsProcessor.h"
 
 #define TOP_N 10
 
+// Get list of files in input directory
 FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     DIR* dir = NULL;
     dir = opendir(input_dir_path);
@@ -28,7 +28,6 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     struct dirent* node;
     while ((node = readdir(dir)) != NULL) {
         if (node->d_type == DT_REG) {
-            // TODO(@smelskiyd): Maybe need to copy
             char* full_path = (char*)(malloc(strlen(input_dir_path) + 1 + strlen(node->d_name) + 1));
             full_path = strcat(full_path, input_dir_path);
             full_path = strcat(full_path, "/");
@@ -42,6 +41,7 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     return last_file_node;
 }
 
+// Sort top instances in decreasing order
 void SortTopInstances(Bucket* top[], size_t length) {
     // Bubble sort
     for (size_t i = 0; i < length; ++i) {
@@ -61,6 +61,7 @@ void SortTopInstances(Bucket* top[], size_t length) {
     }
 }
 
+// Get top 'length' instances from 'hash_map'
 void GetTopInstances(Bucket* top[], size_t length, HashMap* hash_map) {
     BucketsListNode* buckets;
     buckets = GetAllWords(hash_map);
@@ -69,7 +70,6 @@ void GetTopInstances(Bucket* top[], size_t length, HashMap* hash_map) {
         int pos = -1;
         for (size_t i = 0; i < length; ++i) {
             if (top[i] == NULL) {
-                min_cnt = 0;
                 pos = (int)i;
                 break;
             } else if (top[i]->cnt < min_cnt) {
@@ -100,7 +100,7 @@ void GetTopInstances(Bucket* top[], size_t length, HashMap* hash_map) {
 }
 
 void PrintResults(const LogsProcessorResult* result) {
-    printf("Program processed %zu logs\n", result->total_logs_processed);
+    printf("Program has processed %zu logs\n", result->total_logs_processed);
     printf("Total number of returned bytes: %zu\n", result->total_bytes_send);
 
     Bucket* top_urls[TOP_N];
@@ -113,6 +113,7 @@ void PrintResults(const LogsProcessorResult* result) {
         if (top_urls[i] != NULL) {
             printf("- %s [total weight = %lld]\n", top_urls[i]->word, top_urls[i]->cnt);
             DestructBucket(top_urls[i]);
+            free(top_urls[i]);
         }
     }
 
@@ -126,70 +127,24 @@ void PrintResults(const LogsProcessorResult* result) {
         if (top_referers[i] != NULL) {
             printf("- %s [total mentions = %lld]\n", top_referers[i]->word, top_referers[i]->cnt);
             DestructBucket(top_referers[i]);
+            free(top_referers[i]);
         }
     }
-}
-
-void RunParallelProcessing(size_t n_threads, FileWithMutex* files, size_t files_n) {
-    LogsProcessorResult* processors_result = NULL;
-    processors_result = (LogsProcessorResult*)malloc(sizeof(LogsProcessorResult) * n_threads);
-    for (size_t i = 0; i < n_threads; ++i) {
-        InitLogsProcessorResult(&processors_result[i]);
-    }
-
-    pthread_t* threads = (pthread_t*)(malloc(sizeof(pthread_t) * n_threads));
-    for (size_t i = 0; i < n_threads; ++i) {
-        ThreadArgs* thread_args = (ThreadArgs*)(malloc(sizeof(ThreadArgs)));
-        thread_args->processor_result = &processors_result[i];
-        thread_args->files = files;
-        thread_args->files_n = files_n;
-        thread_args->thread_id = i;
-
-        if (pthread_create(&threads[i], NULL, SingleThreadProcess, (void*)thread_args)) {
-            perror("Failed to create thread");
-            exit(errno);
-        }
-    }
-
-    for (size_t i = 0; i < n_threads; ++i) {
-        pthread_join(threads[i], NULL);
-    }
-    free(threads);
-
-    LogsProcessorResult total_result;
-    InitLogsProcessorResult(&total_result);
-    for (size_t i = 0; i < n_threads; ++i) {
-        CombineTwoResults(&total_result, &processors_result[i]);
-        printf("Thread %zu has processed %zu logs\n", i, processors_result[i].total_logs_processed);
-        DestroyLogsProcessorResult(&processors_result[i]);
-    }
-    free(processors_result);
-
-    PrintResults(&total_result);
 }
 
 void Process(const char* input_dir_path, size_t n_threads) {
     FileNode* list_of_files = GetListOfFilesInDirectory(input_dir_path);
-    printf("Input directory has %zu files:\n", CountListSize(list_of_files));
+    size_t files_n = CountListSize(list_of_files);
+    printf("Input directory has %zu files:\n", files_n);
     PrintListOfFiles(list_of_files);
 
-    size_t files_n = CountListSize(list_of_files);
-    FileWithMutex* files = (FileWithMutex*)(malloc(sizeof(FileWithMutex) * files_n));
+    LogsProcessorResult* results = NULL;
+    results = RunParallelLogsProcessor(list_of_files, files_n, n_threads);
 
-    FileNode* head = list_of_files;
-    for (size_t i = 0; i < files_n; ++i, head = head->next) {
-        FileWithMutex* cur = &files[i];
-        FileWithMutexInit(cur, head->file_path);
-    }
+    PrintResults(results);
+
+    DestroyLogsProcessorResult(results);
     DestroyList(list_of_files);
-
-    RunParallelProcessing(n_threads, files, files_n);
-
-    for (size_t i = 0; i < files_n; ++i) {
-        FileWithMutex* cur = &files[i];
-        FileWithMutexDestroy(cur);
-    }
-    free(files);
 }
 
 int main(int argc, char** argv) {
@@ -211,13 +166,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    clock_t start = clock();
+    struct timespec start, finish;
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     Process(input_dir_path, (size_t)n_threads);
 
-    clock_t end = clock();
-    clock_t dur = end - start;
-    double time_taken = ((double)dur) / CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+
+    double time_taken = (double)(finish.tv_sec - start.tv_sec);
+    time_taken += (double)(finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     printf("The program took %.5lf seconds to execute\n", time_taken);
     return 0;
 }
