@@ -99,7 +99,7 @@ void GetTopInstances(Bucket* top[], size_t length, HashMap* hash_map) {
     SortTopInstances(top, length);
 }
 
-void PrintResults(const LogsProcessorResult* result) {
+void PrintResults(const LogsStatistics* result) {
     printf("Program has processed %zu logs\n", result->total_logs_processed);
     printf("Total number of returned bytes: %zu\n", result->total_bytes_send);
 
@@ -138,12 +138,12 @@ void Process(const char* input_dir_path, size_t n_threads) {
     printf("Input directory has %zu files:\n", files_n);
     PrintListOfFiles(list_of_files);
 
-    LogsProcessorResult* results = NULL;
-    results = RunParallelLogsProcessor(list_of_files, files_n, n_threads);
+    LogsStatistics* result = NULL;
+    result = RunParallelLogsProcessor(list_of_files, files_n, n_threads);
 
-    PrintResults(results);
+    PrintResults(result);
 
-    DestroyLogsProcessorResult(results);
+    DestroyLogsStatistics(result);
     DestroyList(list_of_files);
 }
 

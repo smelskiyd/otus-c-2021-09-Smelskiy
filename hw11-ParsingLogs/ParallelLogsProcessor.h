@@ -8,6 +8,6 @@
 #include "FileList.h"
 #include "LogsProcessor.h"
 
-LogsProcessorResult* RunParallelLogsProcessor(FileNode* list_of_files, size_t files_n, size_t n_threads);
+LogsStatistics* RunParallelLogsProcessor(FileNode* list_of_files, size_t files_n, size_t n_threads);
 
 #endif //OTUSHW_PARALLELLOGSPROCESSOR_H
