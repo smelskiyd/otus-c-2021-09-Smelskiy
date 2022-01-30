@@ -136,6 +136,13 @@ void PrintResults(const LogsStatistics* result) {
 void Process(const char* input_dir_path, size_t n_threads) {
     FileNode* list_of_files = GetListOfFilesInDirectory(input_dir_path);
     size_t files_n = CountListSize(list_of_files);
+
+    if (files_n == 0) {
+        printf("Input directory is empty.\n");
+        DestroyList(list_of_files);
+        return;
+    }
+
     printf("Input directory has %zu files:\n", files_n);
     PrintListOfFiles(list_of_files);
 
