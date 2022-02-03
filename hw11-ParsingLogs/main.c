@@ -24,18 +24,23 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
         exit(errno);
     }
 
+    // input_dir_path with slash
+    const size_t prefix_len = strlen(input_dir_path) + 2;
+    char* prefix_str = (char*)(malloc(prefix_len));
+    snprintf(prefix_str, prefix_len, "%s%s", input_dir_path, "/");
+
     FileNode* last_file_node = NULL;
     struct dirent* node;
     while ((node = readdir(dir)) != NULL) {
         if (node->d_type == DT_REG) {
-            char* full_path = (char*)(malloc(strlen(input_dir_path) + 1 + strlen(node->d_name) + 1));
-            full_path[0] = '\0';
-            full_path = strcat(full_path, input_dir_path);
-            full_path = strcat(full_path, "/");
-            full_path = strcat(full_path, node->d_name);
+            const size_t full_path_len = prefix_len + strlen(node->d_name) + 1;
+            char* full_path = (char*)(malloc(full_path_len));
+            snprintf(full_path, full_path_len, "%s%s", prefix_str, node->d_name);
             last_file_node = InsertNode(last_file_node, full_path);
         }
     }
+
+    free(prefix_str);
 
     closedir(dir);
 
