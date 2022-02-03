@@ -8,4 +8,5 @@ set(SRC
         ParallelLogsProcessor.h     ParallelLogsProcessor.c)
 
 add_executable(OtusHW11_ParsingLogs main.c ${SRC})
-target_link_libraries(OtusHW11_ParsingLogs -pthread MyHashMap)
+add_dependencies(OtusHW11_ParsingLogs MyHashMap)
+target_link_libraries(OtusHW11_ParsingLogs PRIVATE -pthread MyHashMap)

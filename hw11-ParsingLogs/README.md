@@ -15,6 +15,9 @@ Program requires exactly two input arguments in the following order:
 1. Input directory path;
 2. Number of threads to parallel the program;
 
+# Dependencies:
+The program uses Homework-3 MyHashMap library, so you should also build this.
+
 # Implementation:
 Each thread is actively trying to get the mutex over any file.
 
