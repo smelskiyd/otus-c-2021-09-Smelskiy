@@ -47,24 +47,30 @@ FileNode* GetListOfFilesInDirectory(const char* input_dir_path) {
     return last_file_node;
 }
 
+int TopInstancesComparator(const void *arg1, const void *arg2) {
+    const Bucket** lhs_p = (const Bucket**)(arg1);
+    const Bucket** rhs_p = (const Bucket**)(arg2);
+    const Bucket* lhs = *lhs_p;
+    const Bucket* rhs = *rhs_p;
+
+    if (lhs == NULL) {
+        return rhs == NULL ? 0 : 1;
+    }
+    if (rhs == NULL) {
+        return -1;
+    }
+    if (lhs->cnt > rhs->cnt) {
+        return -1;
+    } else if (lhs->cnt == rhs->cnt) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 // Sort top instances in decreasing order
 void SortTopInstances(Bucket* top[], size_t length) {
-    // Bubble sort
-    for (size_t i = 0; i < length; ++i) {
-        for (size_t j = i + 1; j < length; ++j) {
-            if (top[j] != NULL) {
-                // Swap, if needed
-                if (top[i] == NULL) {
-                    top[i] = top[j];
-                    top[j] = NULL;
-                } else if (top[j]->cnt > top[i]->cnt) {
-                    Bucket* tmp = top[j];
-                    top[j] = top[i];
-                    top[i] = tmp;
-                }
-            }
-        }
-    }
+    qsort(top, length, sizeof(Bucket*), TopInstancesComparator);
 }
 
 // Get top 'length' instances from 'hash_map'
