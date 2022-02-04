@@ -20,6 +20,31 @@ const char* kTelehackName = "telehack.com";
 
 char buffer[MAX_BUFFER_LEN];
 
+char* CombineInputWords(char** words, int n) {
+    if (n < 0) {
+        return NULL;
+    }
+
+    size_t total_length = 0;
+    total_length += n ? n - 1 : 0; // whitespaces
+    for (int i = 0; i < n; ++i) {
+        total_length += strlen(words[i]);
+    }
+
+    char* result = (char*)malloc(total_length + 1);
+    size_t last_pos = 0;
+    for (int i = 0; i < n; ++i) {
+        if (i) {
+            result[last_pos++] = ' ';
+        }
+        snprintf(result + last_pos, total_length + 1 - last_pos, "%s", words[i]);
+        last_pos += strlen(words[i]);
+    }
+    result[last_pos] = '\0';
+
+    return result;
+}
+
 void GetTelehackAddr(struct sockaddr** addr, socklen_t* addr_len, int sock_type) {
     struct addrinfo* info = NULL;
     if (getaddrinfo(kTelehackName, "telnet", NULL, &info)) {
@@ -128,16 +153,16 @@ void ReadResultResponse(int fd) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
+    if (argc < 3) {
         fprintf(stderr, "Wrong number of input arguments.\n"
-                        "Program requires exactly 2 input arguments:\n"
+                        "Program requires 2 input arguments in the following order:\n"
                         "- text font;\n"
-                        "- input text;\n");
+                        "- input text (it might be separated in individual words);\n");
         return 1;
     }
 
     const char* font = argv[1];
-    const char* input_text = argv[2];
+    char* input_text = CombineInputWords(argv + 2, argc - 2);
 
     printf("Font: \"%s\"\n", font);
     printf("Input text: \"%s\"\n", input_text);
@@ -168,5 +193,6 @@ int main(int argc, char** argv) {
 
     ReadResultResponse(fd);
 
+    free(input_text);
     return 0;
 }

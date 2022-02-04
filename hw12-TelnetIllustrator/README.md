@@ -5,10 +5,11 @@ sends to it input command in format ```figlet \font text```, and receives the re
 The result is ASCII illustrated text in the corresponding font.
 
 # Input arguments
-Program receives exactly two input arguments:
+Program requires two input arguments:
 
 - font, one of the following:
-  ```3-d                3x5                5lineoblique       acrobatic
+  ```
+  3-d                3x5                5lineoblique       acrobatic
   alligator          alligator2         alphabet           avatar
   banner             banner3            banner3-D          banner4
   barbwire           basic              bell               big
@@ -46,4 +47,4 @@ Program receives exactly two input arguments:
   tombstone          trek               tsalagi            twopoint
   univers            usaflag            wavy               weird
   ```
-- input text
+- input text (it might be separated in individual words);
