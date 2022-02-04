@@ -11,15 +11,15 @@
 
 #include "TelnetProtocol.h"
 
-#define MAX_BUFFER_LEN 4000
+#define MAX_BUFFER_LEN 4096
 
 const char* kFigletStr = "figlet";
 
 const char* kTelehackName = "telehack.com";
 
-char buffer[MAX_BUFFER_LEN + 1];
+char buffer[MAX_BUFFER_LEN];
 
-void GetTelehackAddr(int sock_type, struct sockaddr** addr, socklen_t* addr_len) {
+void GetTelehackAddr(struct sockaddr** addr, socklen_t* addr_len, int sock_type) {
     struct addrinfo* info = NULL;
     if (getaddrinfo(kTelehackName, "telnet", NULL, &info)) {
         perror("Failed to get Telehack address info");
@@ -41,10 +41,8 @@ void GetTelehackAddr(int sock_type, struct sockaddr** addr, socklen_t* addr_len)
 }
 
 void ReadStartMessage(int fd) {
-    buffer[0] = '\0';
-
     do {
-        int len = (int)recv(fd, buffer, MAX_BUFFER_LEN, 0);
+        ssize_t len = recv(fd, buffer, MAX_BUFFER_LEN, 0);
         buffer[len] = '\0';
         if (len < 0) {
             perror("Failed to receive data from server");
@@ -54,10 +52,14 @@ void ReadStartMessage(int fd) {
             fprintf(stderr, "Connection was closed");
             exit(EXIT_FAILURE);
         }
-        if (len > 2 && buffer[len - 1] == '.' && buffer[len - 2] == '\n') {
+        // A single dot on the new line means that the server is waiting for the response
+        if (buffer[len - 1] == '.' && (len == 1 || (len > 1 && buffer[len - 2] == '\n'))) {
             break;
         }
     } while (1);
+
+    /// Notes:
+    /// Received commands: {255 251 3} {255 251 1} {255 253 24} {255 253 31}
 
     printf("Successfully read start message from server\n\n");
 }
@@ -68,16 +70,16 @@ void SendFigletCommand(int fd, const char* font, const char* text) {
     snprintf(command_str, command_str_len, "%s %c%s %s", kFigletStr, '/', font, text);
     printf("Command: \"%s\"\n", command_str);
 
-    const unsigned char command_prefix[] = {IAC, WILL, ECHO_C, IAC, DONT, ECHO_C,
-                                            IAC, WILL, SUPPRESS, IAC, DONT, SUPPRESS,
+    const unsigned char command_prefix[] = {IAC, DONT, SUPPRESS, IAC, WILL, SUPPRESS,
+                                            IAC, DONT, ECHO_C, IAC, WILL, ECHO_C,
                                             13, 10, '\0'};
     const unsigned char command_suffix[] = {13, 10, '\0'};
 
     snprintf(buffer, MAX_BUFFER_LEN, "%s%s%s", command_prefix, command_str, command_suffix);
 
-    size_t cmd_len = strlen(buffer);
+    const size_t cmd_len = strlen(buffer);
 
-    int len = (int)send(fd, buffer, cmd_len + 1, 0);
+    ssize_t len = send(fd, buffer, cmd_len + 1, 0);
     if (len < 0) {
         perror("Failed to send data to server");
         exit(errno);
@@ -90,15 +92,16 @@ void SendFigletCommand(int fd, const char* font, const char* text) {
 
 void ReadResultResponse(int fd) {
     do {
-        int len = (int)recv(fd, buffer, MAX_BUFFER_LEN, 0);
-        buffer[len] = '\0';
+        ssize_t len = recv(fd, buffer, MAX_BUFFER_LEN, 0);
         if (len < 0) {
             perror("Failed to receive data from server");
             exit(errno);
         }
         if (len == 0) {
-            break;
+            fprintf(stderr, "Connection was closed");
+            exit(EXIT_FAILURE);
         }
+        buffer[len] = '\0';
         printf("%s", buffer);
     } while (1);
 }
@@ -118,18 +121,18 @@ int main(int argc, char** argv) {
     printf("Font: \"%s\"\n", font);
     printf("Input text: \"%s\"\n", input_text);
 
+    struct sockaddr* addr = NULL;
+    socklen_t addr_len = 0;
+    GetTelehackAddr(&addr, &addr_len, SOCK_STREAM);
+    if (!addr) {
+        printf("Failed to find TCP address of the endpoint\n");
+        return 1;
+    }
+
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         perror("Failed to create a socket");
         exit(errno);
-    }
-
-    struct sockaddr* addr = NULL;
-    socklen_t addr_len = 0;
-    GetTelehackAddr(SOCK_STREAM, &addr, &addr_len);
-    if (!addr) {
-        printf("Failed to find TCP address of the endpoint\n");
-        return 1;
     }
 
     if (connect(fd, addr, addr_len)) {
