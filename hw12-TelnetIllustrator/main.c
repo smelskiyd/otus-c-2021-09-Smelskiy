@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "TelnetProtocol.h"
 
@@ -40,10 +41,20 @@ void GetTelehackAddr(struct sockaddr** addr, socklen_t* addr_len, int sock_type)
     *addr_len = info->ai_addrlen;
 }
 
+// A single dot on the new line means that the server is waiting for the response
+bool ServerWaitsForNewCommand(const char* str, ssize_t len) {
+    if (len <= 0) {
+        return false;
+    }
+    if (len == 1) {
+        return str[len - 1] == '.';
+    }
+    return str[len - 2] == '\n' && str[len - 1] == '.';
+}
+
 void ReadStartMessage(int fd) {
     do {
         ssize_t len = recv(fd, buffer, MAX_BUFFER_LEN, 0);
-        buffer[len] = '\0';
         if (len < 0) {
             perror("Failed to receive data from server");
             exit(errno);
@@ -53,7 +64,7 @@ void ReadStartMessage(int fd) {
             exit(EXIT_FAILURE);
         }
         // A single dot on the new line means that the server is waiting for the response
-        if (buffer[len - 1] == '.' && (len == 1 || (len > 1 && buffer[len - 2] == '\n'))) {
+        if (ServerWaitsForNewCommand(buffer, len)) {
             break;
         }
     } while (1);
@@ -84,6 +95,10 @@ void SendFigletCommand(int fd, const char* font, const char* text) {
         perror("Failed to send data to server");
         exit(errno);
     }
+    if (len == 0) {
+        fprintf(stderr, "Connection was closed");
+        exit(EXIT_FAILURE);
+    }
 
     printf("Successfully sent the command to the server\n");
 
@@ -100,6 +115,12 @@ void ReadResultResponse(int fd) {
         if (len == 0) {
             fprintf(stderr, "Connection was closed");
             exit(EXIT_FAILURE);
+        }
+        if (ServerWaitsForNewCommand(buffer, len)) {
+            // Remove single dot at new line when server returns the result
+            buffer[len - 1] = '\0';
+            printf("%s", buffer);
+            break;
         }
         buffer[len] = '\0';
         printf("%s", buffer);
