@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -20,8 +21,8 @@ int main(int argc, char** argv) {
 
     struct sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, SOCKET_PATH);
-    size_t addr_length = sizeof(addr.sun_family) + strlen(SOCKET_PATH);
+    strcpy(addr.sun_path, kSocketPath);
+    size_t addr_length = sizeof(addr.sun_family) + strlen(kSocketPath);
 
     int bind_status = bind(fd, (struct sockaddr*)&addr, addr_length);
     if (bind_status < 0) {
@@ -66,7 +67,17 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            printf("New message received: %s\n", buffer);
+            int bytes_read = 0;
+            while (bytes_read < bytes_received) {
+                if (bytes_read + (int)sizeof(file_size_t) > bytes_received) {
+                    fprintf(stderr, "Received message in incorrect format.\n");
+                    return EXIT_FAILURE;
+                }
+
+                const file_size_t* file_size = (const file_size_t*)&buffer[bytes_read];
+                printf("File size has changed to `%lld` bytes.\n", *file_size);
+                bytes_read += sizeof(file_size_t);
+            }
         } while (1);
 
         close(wd);

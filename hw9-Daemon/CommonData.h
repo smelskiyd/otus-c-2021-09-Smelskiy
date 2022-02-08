@@ -7,6 +7,8 @@
 
 #define MAX_MSG_LENGTH 256
 
-#define SOCKET_PATH "/tmp/mydaemon_socket"
+static const char* kSocketPath = "/tmp/mydaemon_socket";
+
+typedef long long file_size_t;
 
 #endif //OTUSHW_COMMONDATA_H

@@ -19,8 +19,8 @@ int main(int argc, char** argv) {
 
     struct sockaddr_un addr;
     addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, SOCKET_PATH);
-    size_t addr_length = sizeof(addr.sun_family) + strlen(SOCKET_PATH);
+    strncpy(addr.sun_path, kSocketPath, strlen(kSocketPath));
+    size_t addr_length = sizeof(addr.sun_family) + strlen(kSocketPath);
 
     int status = connect(fd, (struct sockaddr*)&addr, addr_length);
     if (status < 0) {
@@ -32,9 +32,12 @@ int main(int argc, char** argv) {
     printf("Successfully connected to server.\n");
 
     char buffer[MAX_MSG_LENGTH];
+
+    file_size_t sample_file_size = 0;
+
     do {
-        sprintf(buffer, "%d", 123);
-        int length = strlen(buffer);
+        memcpy(buffer, (void*)&sample_file_size, sizeof(file_size_t));
+        int length = sizeof(file_size_t);
         int bytes_sent = send(fd, buffer, length, 0);
 
         if (bytes_sent < 0) {
@@ -47,7 +50,9 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Last message wasn't sent completely. Disconnecting...\n");
             break;
         }
-        printf("Successfully sent %d bytes to server. Message = `%s`.\n", length, buffer);
+        printf("Successfully sent %d bytes to server.\n", length);
+
+        ++sample_file_size;
 
         sleep(10);
     } while (1);
