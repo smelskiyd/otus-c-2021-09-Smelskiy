@@ -3,72 +3,76 @@
 //
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <errno.h>
+
+#define MAX_MSG_LENGTH 256
 
 #define SOCKET_PATH "/tmp/mydaemon_socket"
-#define MAX_NUMBER_OF_CLIENTS 1
 
 int main(int argc, char** argv) {
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
-        fprintf(stderr, "Failed to create socket\n");
-        exit(1);
+        perror("Failed to create a socket");
+        return errno;
     }
-    printf("Successfully created socket\n");
+    printf("Successfully created a socket.\n");
 
     struct sockaddr_un addr;
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, SOCKET_PATH);
     size_t addr_length = sizeof(addr.sun_family) + strlen(SOCKET_PATH);
+
     int bind_status = bind(fd, (struct sockaddr*)&addr, addr_length);
     if (bind_status < 0) {
         close(fd);
-        fprintf(stderr, "Failed to bind address\n");
-        exit(2);
+        perror("Failed to bind address to socket");
+        return errno;
     }
-    printf("Successfully binded address\n");
+    printf("Successfully binded address.\n");
 
-    int listen_status = listen(fd, MAX_NUMBER_OF_CLIENTS);
+    int listen_status = listen(fd, 1);
     if (listen_status < 0) {
         close(fd);
-        fprintf(stderr, "Failed to start listening the socket\n");
-        exit(3);
+        perror("Failed to start listening the socket");
+        return errno;
     }
-    printf("Successfully started listening\n");
+    printf("Successfully started to listen input connections.\n");
 
-    printf("Waiting for any connections...\n");
+    char buffer[MAX_MSG_LENGTH];
 
-    char buffer[1024];
+    do {
+        printf("Waiting for the client to connect...\n");
 
-    while (1) {
-        printf("Waiting for any connections...\n");
         int wd = accept(fd, NULL, NULL);
         if (wd < 0) {
-            fprintf(stderr, "Failed to accept the incoming connection\n");
-            break;
+            close(fd);
+            perror("Failed to accept the client connection");
+            return errno;
         }
+        printf("Client was successfully connected with file descriptor = %d.\n", wd);
 
-        printf("Successfully connected to client\n");
+        do {
+            int bytes_received = recv(wd, buffer, sizeof(buffer), 0);
+            if (bytes_received < 0) {
+                close(wd);
+                close(fd);
+                perror("Failed to receive the message from client");
+                return errno;
+            }
 
-        while (1) {
-            int length = 0;
-            if ((length = recv(wd, buffer, sizeof(buffer), 0)) < 0) {
-                fprintf(stderr, "Failed to receive data\n");
+            if (bytes_received == 0) {
+                printf("Connection to client was closed.\n");
                 break;
             }
 
-            if (length == 0) {
-                continue;
-            }
-
             printf("New message received: %s\n", buffer);
-        }
+        } while (1);
 
         close(wd);
-    }
+    } while(1);
 
     close(fd);
     return 0;

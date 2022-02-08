@@ -3,18 +3,20 @@
 //
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <errno.h>
+
+#define MAX_MSG_LENGTH 256
 
 #define SOCKET_PATH "/tmp/mydaemon_socket"
 
 int main(int argc, char** argv) {
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
-        fprintf(stderr, "Failed to create socket\n");
-        exit(1);
+        perror("Failed to create a socket");
+        return errno;
     }
 
     struct sockaddr_un addr;
@@ -25,23 +27,32 @@ int main(int argc, char** argv) {
     int status = connect(fd, (struct sockaddr*)&addr, addr_length);
     if (status < 0) {
         close(fd);
-        fprintf(stderr, "Failed to connect to socket\n");
-        exit(1);
+        perror("Failed to connect to server");
+        return errno;
     }
 
-    printf("Successfully connected to server\n");
+    printf("Successfully connected to server.\n");
 
-    char buffer[256];
-    while (1) {
-        int length = sprintf(buffer, "%llu\n", 1ull);
-        if (send(fd, buffer, length + 1, 0) < 0) {
-            fprintf(stderr, "Failed to send message. Disconnecting...\n");
+    char buffer[MAX_MSG_LENGTH];
+    do {
+        sprintf(buffer, "%d", 123);
+        int length = strlen(buffer);
+        int bytes_sent = send(fd, buffer, length, 0);
+
+        if (bytes_sent < 0) {
+            close(fd);
+            perror("Failed to send message to server");
+            return errno;
+        }
+
+        if (bytes_sent != length) {
+            fprintf(stderr, "Last message wasn't sent completely. Disconnecting...\n");
             break;
         }
-        printf("Successfully sent %d bytes\n", length);
+        printf("Successfully sent %d bytes to server. Message = `%s`.\n", length, buffer);
 
         sleep(10);
-    }
+    } while (1);
 
     close(fd);
     return 0;
