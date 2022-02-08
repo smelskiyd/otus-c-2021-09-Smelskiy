@@ -10,7 +10,7 @@
 #include <syslog.h>
 #include <errno.h>
 
-#define MAX_BUFFER_LENGTH 256
+#include "CommonData.h"
 
 long long GetFileSize(const char* file_path) {
     struct stat file_stat;

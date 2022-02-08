@@ -8,9 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define MAX_MSG_LENGTH 256
-
-#define SOCKET_PATH "/tmp/mydaemon_socket"
+#include "CommonData.h"
 
 int main(int argc, char** argv) {
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
