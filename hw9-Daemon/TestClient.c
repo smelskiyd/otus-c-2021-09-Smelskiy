@@ -31,13 +31,14 @@ int main(int argc, char** argv) {
 
     printf("Successfully connected to server\n");
 
+    char buffer[256];
     while (1) {
-        const char* message = "Client is OK";
-        if (send(fd, message, strlen(message) + 1, 0) < 0) {
+        int length = sprintf(buffer, "%llu\n", 1ull);
+        if (send(fd, buffer, length + 1, 0) < 0) {
             fprintf(stderr, "Failed to send message. Disconnecting...\n");
             break;
         }
-        printf("Successfully sent a message\n");
+        printf("Successfully sent %d bytes\n", length);
 
         sleep(10);
     }
