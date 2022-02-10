@@ -52,18 +52,23 @@ void GetTelehackAddr(struct sockaddr** addr, socklen_t* addr_len, int sock_type)
         exit(errno);
     }
 
-    while (info && info->ai_socktype != sock_type) {
-        info = info->ai_next;
+    struct addrinfo* found_addr = info;
+
+    while (found_addr && found_addr->ai_socktype != sock_type) {
+        found_addr = info->ai_next;
     }
 
-    if (!info) {
+    if (!found_addr) {
         *addr = NULL;
         *addr_len = 0;
+        freeaddrinfo(info);
         return;
     }
 
-    *addr = info->ai_addr;
-    *addr_len = info->ai_addrlen;
+    *addr = (struct sockaddr*)(malloc(sizeof(struct sockaddr)));
+    **addr = *found_addr->ai_addr;
+    *addr_len = found_addr->ai_addrlen;
+    freeaddrinfo(info);
 }
 
 // A single dot on the new line means that the server is waiting for the response
@@ -193,6 +198,7 @@ int main(int argc, char** argv) {
 
     ReadResultResponse(fd);
 
+    free(addr);
     free(input_text);
     return 0;
 }

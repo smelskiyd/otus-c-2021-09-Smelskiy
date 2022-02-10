@@ -10,8 +10,46 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <syslog.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <string.h>
 
+#include "CommonData.h"
 #include "FileInfoMonitoring.h"
+
+/*
+ * Initialize logging
+ */
+void InitializeLogging(const char* program_name) {
+    openlog(program_name, LOG_CONS, LOG_DAEMON);
+}
+
+/*
+ * Connect to server
+ */
+int ConnectToServer() {
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        syslog(LOG_CRIT, "Failed to create a socket.");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sockaddr_un addr;
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, kSocketPath, strlen(kSocketPath));
+    size_t addr_length = sizeof(addr.sun_family) + strlen(kSocketPath);
+
+    int status = connect(fd, (struct sockaddr*)&addr, addr_length);
+    if (status < 0) {
+        close(fd);
+        syslog(LOG_CRIT, "Failed to connect to server.");
+        exit(EXIT_FAILURE);
+    }
+
+    syslog(LOG_INFO, "Successfully connected to server.");
+
+    return fd;
+}
 
 /*
  * Daemonize current program
@@ -107,14 +145,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /*
-     * Initialize logging
-     */
-    openlog(argv[0], LOG_CONS, LOG_DAEMON);
+    InitializeLogging(argv[0]);
+
+    syslog(LOG_INFO, "MyDaemon has started");
+
+    int server_fd = ConnectToServer();
 
     const char* file_path = argv[1];
-    StartMonitoring(file_path);
+    StartMonitoring(file_path, server_fd);
 
+    close(server_fd);
 //    Daemonize();
   //  sleep(100);
 }
