@@ -16,6 +16,7 @@
 
 const char* kFigletStr = "figlet";
 
+const char* kTelnetProtocolStr = "telnet";
 const char* kTelehackName = "telehack.com";
 
 char buffer[MAX_BUFFER_LEN];
@@ -47,7 +48,7 @@ char* CombineInputWords(char** words, int n) {
 
 void GetTelehackAddr(struct sockaddr** addr, socklen_t* addr_len, int sock_type) {
     struct addrinfo* info = NULL;
-    if (getaddrinfo(kTelehackName, "telnet", NULL, &info)) {
+    if (getaddrinfo(kTelehackName, kTelnetProtocolStr, NULL, &info)) {
         perror("Failed to get Telehack address info");
         exit(errno);
     }
