@@ -12,19 +12,34 @@
 #include <libpq-fe.h>
 
 #define MAX_COMMAND_LENGTH 256
+#define MAX_USERNAME_LENGTH 100
+#define MAX_PASSWORD_LENGTH 100
 
 #define SQR(x) ((x) * (x))
+
+const char* localhost_addr = "127.0.0.1";
 
 static char buffer[MAX_COMMAND_LENGTH];
 
 PGconn* ConnectToDatabase(const char* database_name) {
-    snprintf(buffer, MAX_COMMAND_LENGTH, "user=postgres password=admin host=127.0.0.1 dbname=%s", database_name);
+    char user_name[MAX_USERNAME_LENGTH];
+    char password[MAX_PASSWORD_LENGTH];
+    printf("Write username: ");
+    scanf("%s", user_name);
+    printf("Write password: ");
+    scanf("%s", password);
+
+    snprintf(buffer, MAX_COMMAND_LENGTH, "user=%s password=%s host=%s dbname=%s",
+             user_name, password, localhost_addr, database_name);
     PGconn* conn = PQconnectdb(buffer);
     if (PQstatus(conn) != CONNECTION_OK) {
         fprintf(stderr, "Failed to connect to database '%s'.\n", database_name);
+        if (conn != NULL) {
+            PQfinish(conn);
+        }
         exit(EXIT_FAILURE);
     }
-    printf("Successfully connected to Postgres database `%s`\n", database_name);
+    printf("Successfully connected to Postgres database '%s'\n", database_name);
 
     return conn;
 }
@@ -64,7 +79,7 @@ void VerifyColumnType(PGconn* conn, const char* table_name, const char* column_n
 
     char* column_type = PQgetvalue(result, 0, 0);
     if (strcmp(column_type, "integer") != 0) {
-        fprintf(stderr, "Input column must be of integer type, but it isn't!\n");
+        fprintf(stderr, "Input column must be of integer type, but it contains type '%s'!\n", column_type);
         PQclear(result);
         PQfinish(conn);
         exit(EXIT_FAILURE);
@@ -78,10 +93,10 @@ long* GetColumnValues(PGconn* conn, const char* table_name, const char* column_n
     PGresult* result = PQexec(conn, buffer);
     if (PQresultStatus(result) != PGRES_TUPLES_OK) {
         fprintf(stderr, "Failed to execute command: '%s'.\n", buffer);
-        PQfinish(conn);
         if (result != NULL) {
             PQclear(result);
         }
+        PQfinish(conn);
         exit(EXIT_FAILURE);
     }
 
@@ -98,8 +113,8 @@ long* GetColumnValues(PGconn* conn, const char* table_name, const char* column_n
 
         if (current_value == NULL || current_value[0] == '\0' || *first_invalid != '\0') {
             fprintf(stderr, "Wrong format of column value.\n");
-            PQfinish(conn);
             PQclear(result);
+            PQfinish(conn);
             exit(EXIT_FAILURE);
         }
 
@@ -129,7 +144,7 @@ void CalcStatistics(const long* arr, int n) {
 
     printf("Minimum value: %ld\n", min);
     printf("Maximum value: %ld\n", max);
-    printf("Sum of all numbers: %ld\n", sum);
+    printf("Sum of all values: %ld\n", sum);
 
     long avg = sum / (long)n;
     printf("Average value: %ld\n", avg);
@@ -169,6 +184,7 @@ int main(int argc, char** argv) {
 
     CalcStatistics(arr, n);
 
+    free(arr);
     PQfinish(conn);
     return 0;
 }
