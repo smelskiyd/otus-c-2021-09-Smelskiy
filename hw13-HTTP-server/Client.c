@@ -57,6 +57,8 @@ void CreateOutputDirectory(const char* output_directory_path) {
             if (!(stats.st_mode & S_IFDIR)) {
                 fprintf(stderr, "Output directory path already exists and isn't a directory.\n");
                 exit(EXIT_FAILURE);
+            } else {
+                return;
             }
         }
         perror("Failed to create output directory");
@@ -189,6 +191,8 @@ void RunClient(const char* directory_path, const char* address, uint32_t port, c
     GetFile(sfd, file_path, directory_path);
 
     close(sfd);
+
+    // Pause client for 1 second
     sleep(1);
 }
 
