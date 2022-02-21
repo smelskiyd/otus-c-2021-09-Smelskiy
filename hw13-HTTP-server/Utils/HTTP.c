@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void RequestInit(Request* request) {
     request->command = NULL;
@@ -17,9 +18,9 @@ Request* ParseRequest(char* request_str) {
     Request* request = (Request*)malloc(sizeof(Request));
     RequestInit(request);
 
-    request->command = strtok(request_str, " \0");
-    request->file_name = strtok(NULL, " \0");
-    request->http_version = strtok(NULL, " \n\r\0");
+    request->command = strtok(request_str, " ");
+    request->file_name = strtok(NULL, " ");
+    request->http_version = strtok(NULL, " \n\r");
 
     if (request->command == NULL || request->file_name == NULL || request->http_version == NULL) {
         free(request);
@@ -42,9 +43,9 @@ int VerifyRequest(const Request* request, int* status_code, const char** status_
         return -1;
     }
 
-    if (strcmp(request->http_version, "HTTP/1.1") != 0) {
+    if (strcmp(request->http_version, "HTTP/1.0") != 0) {
         *status_code = 400;
-        *status_message = "Bad request: server supports only requests with HTTP/1.1 version";
+        *status_message = "Bad request: server supports only requests with HTTP/1.0 version";
         return -1;
     }
 
@@ -63,9 +64,9 @@ Response* ParseResponse(char* response_str) {
     Response* response = (Response*)malloc(sizeof(Response));
     ResponseInit(response);
 
-    response->http_version = strtok(response_str, " \0");
-    response->status_code = strtok(NULL, " \0");
-    response->status_message = strtok(NULL, "\n\r\0");
+    response->http_version = strtok(response_str, " ");
+    response->status_code = strtok(NULL, " ");
+    response->status_message = strtok(NULL, "\n\r");
 
     if (response->http_version == NULL || response->status_code == NULL || response->status_message == NULL) {
         free(response);
@@ -73,4 +74,19 @@ Response* ParseResponse(char* response_str) {
     }
 
     return response;
+}
+
+void ParseHeader(char* header, Response* response) {
+    char* header_name = strtok(header, ":\r\n");
+    if (strcmp(header_name, "Content-Length") == 0) {
+        char* content_length = strtok(NULL, "\r\n");
+        if (content_length == NULL) {
+            fprintf(stderr, "Failed to parse content-length header\n");
+            response->content_length = -1;
+            return;
+        }
+        response->content_length = strtol(content_length, NULL, 10);
+    } else {
+        fprintf(stderr, "Failed to parse header from HTTP response. Undefined header name: `%s`\n", header_name);
+    }
 }

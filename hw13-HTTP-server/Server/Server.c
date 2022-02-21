@@ -17,6 +17,7 @@
 #include "Worker.h"
 
 #define MAX_EVENTS 128
+#define MAX_WORKERS 128
 
 int SetNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -33,7 +34,7 @@ int CreateServer(const char* address, uint32_t port, int backlog) {
         exit(errno);
     }
 
-    struct sockaddr_in addr;
+    struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(address);
@@ -58,6 +59,8 @@ int CreateServer(const char* address, uint32_t port, int backlog) {
     }
 
     printf("Server is successfully created.\n");
+
+    signal(SIGPIPE, SIG_IGN);
 
     return sfd;
 }
@@ -87,6 +90,8 @@ void RunServer(const char* address, uint32_t port, int backlog, ServerArgs* args
 
     struct kevent events[MAX_EVENTS];
 
+    InitWorkers(MAX_WORKERS);
+
     do {
         int events_n = kevent(kqueue_id, NULL, 0, events, MAX_EVENTS, NULL);
         if (events_n < 0) {
@@ -101,7 +106,6 @@ void RunServer(const char* address, uint32_t port, int backlog, ServerArgs* args
 
             if (events[i].flags & EV_EOF) {
                 printf("Client with file descriptor '%d' has disconnected\n", event_fd);
-                close(kqueue_id);
                 close(event_fd);
                 continue;
             }
@@ -130,16 +134,13 @@ void RunServer(const char* address, uint32_t port, int backlog, ServerArgs* args
             }
 
             if (events[i].filter & EVFILT_READ) {
-                WorkerArgs* worker_args = (WorkerArgs*)(malloc(sizeof(WorkerArgs)));
-                worker_args->fd = event_fd;
-                worker_args->directory_path = args->directory_path;
-
-                RunWorker(worker_args);
+                RunWorker(event_fd, args->directory_path);
                 continue;
             }
         }
     } while (1);
 
+    DestroyWorkers();
     close(kqueue_id);
     close(sfd);
 }

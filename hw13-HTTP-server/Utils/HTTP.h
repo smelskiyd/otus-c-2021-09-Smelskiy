@@ -5,6 +5,8 @@
 #ifndef OTUSHW_HTTP_H
 #define OTUSHW_HTTP_H
 
+#include <sys/types.h>
+
 #define MAX_REQUEST_LEN 512
 #define MAX_RESPONSE_LEN 4096
 
@@ -23,10 +25,13 @@ typedef struct {
     char* http_version;
     char* status_code;
     char* status_message;
+
+    ssize_t content_length;
 } Response;
 
 void ResponseInit(Response* response);
 
 Response* ParseResponse(char* response_str);
+void ParseHeader(char* header, Response* response);
 
 #endif //OTUSHW_HTTP_H

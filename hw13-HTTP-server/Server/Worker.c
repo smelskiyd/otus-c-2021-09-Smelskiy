@@ -12,11 +12,19 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include "HTTP.h"
 #include "Utils.h"
 
-#define MAX_BUFFER_LEN 4096
+ssize_t GetFileSize(const char* file_path) {
+    struct stat stats;
+    if (stat(file_path, &stats) < 0) {
+        fprintf(stderr, "Failed to get file size: `%s`\n", file_path);
+        return -1;
+    }
+    return stats.st_size;
+}
 
 int Send(int sfd, const char* message, size_t len) {
     ssize_t bytes_sent;
@@ -33,7 +41,7 @@ void SendError(int fd, int status_code, const char* status_message) {
     printf("Sending error response to client %d\n", fd);
 
     char response[MAX_RESPONSE_LEN];
-    snprintf(response, MAX_RESPONSE_LEN, "HTTP/1.1 %d %s\n", status_code, status_message);
+    snprintf(response, MAX_RESPONSE_LEN, "HTTP/1.0 %d %s\r\n\r\n", status_code, status_message);
 
     if (Send(fd, response, strlen(response)) < 0) {
         perror("Failed to send an error response to client");
@@ -44,33 +52,45 @@ void SendError(int fd, int status_code, const char* status_message) {
            fd, status_code, status_message);
 }
 
-int SendFile(int fd, const char* file_path) {
-    printf("Sending file response to client %d\n", fd);
+int SendFile(int sfd, const char* file_path) {
+    printf("Sending file response to client %d\n", sfd);
 
-    FILE* file = fopen(file_path, "r");
-    if (file == NULL) {
-        SendError(fd, 400, "Bad request");
+    ssize_t file_size = GetFileSize(file_path);
+    if (file_size < 0) {
+        SendError(sfd, 400, "Bad request");
         return -1;
     }
 
-    const char* response_header = "HTTP/1.1 200 OK\n\n";
-    if (Send(fd, response_header, strlen(response_header)) < 0) {
+    int fd = open(file_path, O_RDONLY);
+    if (fd < 0) {
+        SendError(sfd, 400, "Bad request");
+        return -1;
+    }
+
+    char response_header[MAX_RESPONSE_LEN];
+    snprintf(response_header, MAX_RESPONSE_LEN, "HTTP/1.0 200 OK\r\n"
+                                                "Content-Length: %ld\r\n\r\n", file_size);
+    if (Send(sfd, response_header, strlen(response_header)) < 0) {
         perror("Failed to send a response to client");
-        fclose(file);
+        close(fd);
         return -1;
     }
 
-    char buffer[MAX_BUFFER_LEN + 1];
-    while (!feof(file)) {
-        size_t len = fread(buffer, 1, MAX_BUFFER_LEN, file);
-        if (Send(fd, buffer, len) < 0) {
-            perror("Failed to send a response to client");
-            fclose(file);
+    long long len = 0;
+    for (off_t offset = 0; offset < file_size; offset += len) {
+        ssize_t status = sendfile(fd, sfd, offset, &len, NULL, 0);
+        if (status < 0) {
+            perror("Failed to send a file to server");
+            close(fd);
             return -1;
+        }
+        if (status == 0) {
+            // file has reached the end
+            break;
         }
     }
 
-    fclose(file);
+    close(fd);
     return 0;
 }
 
@@ -132,12 +152,17 @@ void ProcessRequest(int fd, char* request_str, const char* directory_path) {
     free(request);
 }
 
-void* ProcessConnection(void* args) {
-    pthread_detach(pthread_self());
+static void WorkerCleanup(void* args) {
+    int* finished_flag = (int*)args;
+    *finished_flag = 1;
+}
 
+void* ProcessConnection(void* args) {
     WorkerArgs* worker_args = (WorkerArgs*)args;
     int fd = worker_args->fd;
     const char* directory_path = worker_args->directory_path;
+    int* finish_flag = worker_args->finish_flag;
+    pthread_cleanup_push(WorkerCleanup, (void*)finish_flag);
     free(worker_args);
 
     char request[MAX_REQUEST_LEN];
@@ -161,16 +186,78 @@ void* ProcessConnection(void* args) {
     }
 
     close(fd);
+
+    pthread_cleanup_pop(1);
     pthread_exit(NULL);
 }
 
-void RunWorker(WorkerArgs* args) {
-    printf("Running new worker for client %d\n", args->fd);
+typedef struct {
+    pthread_t thread;
+    int worker_inited;
+    int worker_finished;
+} WorkerInfo;
 
-    pthread_t* thread = (pthread_t*)(malloc(sizeof(pthread_t)));
-    if (pthread_create(thread, NULL, ProcessConnection, (void*)args)) {
+static WorkerInfo* workers;
+static size_t workers_count = 0;
+
+void InitWorkers(size_t n) {
+    workers_count = n;
+    workers = (WorkerInfo*)malloc(sizeof(WorkerInfo) * n);
+    for (size_t i = 0; i < n; ++i) {
+        workers[i].worker_inited = 0;
+        workers[i].worker_finished = 1;
+    }
+}
+
+void DestroyWorkers() {
+    for (size_t i = 0; i < workers_count; ++i) {
+        if (workers[i].worker_inited) {
+            pthread_join(workers[i].thread, NULL);
+        }
+    }
+    free(workers);
+    workers_count = 0;
+}
+
+WorkerInfo* FindFreeWorker() {
+    for (size_t i = 0; i < workers_count; ++i) {
+        if (workers[i].worker_finished) {
+            if (workers[i].worker_inited) {
+                // It's possible that thread is almost gone but isn't finished yet
+                pthread_join(workers[i].thread, NULL);
+            }
+            return &workers[i];
+        }
+    }
+    return NULL;
+}
+
+void RunWorker(int fd, const char* directory_path) {
+    if (workers == NULL) {
+        fprintf(stderr, "Workers are not inited.\n");
+        return;
+    }
+
+    WorkerInfo* worker = NULL;
+    while ((worker = FindFreeWorker()) == NULL) {
+    }
+    if (worker == NULL) {
+        fprintf(stderr, "Failed to find free worker\n");
+        return;
+    }
+
+    printf("Running new worker for client %d\n", fd);
+
+    worker->worker_inited = 1;
+    worker->worker_finished = 0;
+
+    WorkerArgs* worker_args = (WorkerArgs*)(malloc(sizeof(WorkerArgs)));
+    worker_args->fd = fd;
+    worker_args->directory_path = directory_path;
+    worker_args->finish_flag = &worker->worker_finished;
+
+    if (pthread_create(&worker->thread, NULL, ProcessConnection, (void*)worker_args)) {
         fprintf(stderr, "Failed to create thread");
         exit(1);
     }
-    // TODO(@smelskiyd): fix memory leak
 }

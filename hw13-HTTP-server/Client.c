@@ -119,54 +119,68 @@ int Receive(int sfd, char* buffer, size_t buffer_len) {
     return (int)recv_len;
 }
 
-void ReceiveResponse(int sfd, FILE* output_file) {
+int ReceiveResponse(int sfd, FILE* output_file) {
     int recv_len;
     char buffer[MAX_RESPONSE_LEN + 1];
 
     printf("Receiving server response...\n");
 
-    {
-        // Receive header
-        int header_len = 0;
-        while (Receive(sfd, buffer + header_len, 1)) {
-            if (buffer[header_len] == '\n' || buffer[header_len] == '\0' || buffer[header_len] == '\r') {
+    Response* response = NULL;
+    // Receive header
+    int last_line_start = 0;
+    int header_len = 0;
+    int lines_read = 0;
+    while (Receive(sfd, buffer + header_len, 1)) {
+        if (header_len && buffer[header_len - 1] == '\r' && buffer[header_len] == '\n') {
+            if (last_line_start == header_len - 1) {
+                // Empty line
                 break;
             }
-            ++header_len;
-        }
-        buffer[header_len] = '\0';
 
-        Response* response = ParseResponse(buffer);
-        if (response == NULL) {
-            fprintf(stderr, "Failed to parse response status: `%s`\n", buffer);
-            return;
+            if (lines_read == 0) {
+                response = ParseResponse(buffer + last_line_start);
+                if (response == NULL) {
+                    fprintf(stderr, "Failed to parse response status: `%s`\n", buffer);
+                    return -1;
+                }
+            } else {
+                ParseHeader(buffer + last_line_start, response);
+            }
+            last_line_start = header_len + 1;
+            ++lines_read;
         }
+        ++header_len;
+    }
 
-        printf("Successfully received a response with status code = `%s`, status message = `%s`\n",
-               response->status_code, response->status_message);
-        if (strcmp(response->status_code, "200") != 0) {
-            fprintf(stderr, "Failed to receive file from server.\n");
-            free(response);
-            return;
-        }
-
-        // Skip second new-line character
+    printf("Successfully received a response with status code = `%s`, status message = `%s`\n"
+           "Content-Length: %ld\n",
+           response->status_code, response->status_message, response->content_length);
+    if (strcmp(response->status_code, "200") != 0) {
         free(response);
-        Receive(sfd, buffer, 1);
+        return -1;
     }
 
     printf("Receiving file from server...\n");
 
+    ssize_t total_bytes_received = 0;
     while ((recv_len = Receive(sfd, buffer, MAX_RESPONSE_LEN))) {
         fwrite(buffer, 1, recv_len, output_file);
+        total_bytes_received += recv_len;
     }
 
-    printf("Successfully received file from server\n");
+    if (total_bytes_received != response->content_length) {
+        fprintf(stderr, "File wasn't received successfully from server\n");
+        free(response);
+        return -1;
+    }
+
+    free(response);
+    return 0;
 }
 
 void GetFile(int sfd, const char* file_path, const char* output_dir_path) {
     static char request[MAX_REQUEST_LEN];
-    snprintf(request, MAX_REQUEST_LEN, "GET %s HTTP/1.1\n", file_path);
+    snprintf(request, MAX_REQUEST_LEN, "GET %s HTTP/1.0\n", file_path);
 
     SendRequest(sfd, request);
 
@@ -177,7 +191,12 @@ void GetFile(int sfd, const char* file_path, const char* output_dir_path) {
         exit(errno);
     }
 
-    ReceiveResponse(sfd, output_file);
+    int status = ReceiveResponse(sfd, output_file);
+    if (status < 0) {
+        fprintf(stderr, "Failed to receive the response from server\n");
+    } else {
+        printf("Successfully received file from server\n");
+    }
 
     fclose(output_file);
     free(output_file_path);
