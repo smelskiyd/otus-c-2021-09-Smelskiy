@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
     strcpy(addr.sun_path, kSocketPath);
     size_t addr_length = sizeof(addr.sun_family) + strlen(kSocketPath);
 
+    unlink(kSocketPath);
     int bind_status = bind(fd, (struct sockaddr*)&addr, addr_length);
     if (bind_status < 0) {
         close(fd);

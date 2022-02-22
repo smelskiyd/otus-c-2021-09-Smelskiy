@@ -20,6 +20,7 @@ file_size_t GetFileSize(const char* file_path) {
     struct stat file_stat;
     if (stat(file_path, &file_stat) != 0) {
         syslog(LOG_CRIT, "Failed to get file stats for file `%s`. Errno: %d", file_path, errno);
+        exit(EXIT_FAILURE);
     }
     return (file_size_t)file_stat.st_size;
 }

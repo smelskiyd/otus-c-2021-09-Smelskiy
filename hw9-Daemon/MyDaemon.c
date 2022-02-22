@@ -13,9 +13,67 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <string.h>
+#include <errno.h>
 
 #include "CommonData.h"
 #include "FileInfoMonitoring.h"
+
+#define LOCKFILE "/tmp/MyDaemon.pid"
+#define LOCKMODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+
+static int PIDFileFD = -1;
+
+void UpdatePIDFile() {
+    if (PIDFileFD < 0) {
+        fprintf(stderr, "Failed to update PID file: PID file is undefined\n");
+        exit(EXIT_FAILURE);
+    }
+    ftruncate(PIDFileFD, 0);
+
+    char buf[16];
+    sprintf(buf, "%ld", (long)getpid());
+    if (write(PIDFileFD, buf, strlen(buf) + 1) < 0) {
+        syslog(LOG_INFO, "Failed to write to PID file");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void SignalSIGHUPHandler(int signo) {
+    if (signo == SIGHUP) {
+        if (PIDFileFD != -1) {
+            UpdatePIDFile();
+        }
+    }
+}
+
+int LockFile(int fd) {
+    struct flock fl;
+    fl.l_type = F_WRLCK;
+    fl.l_start = 0;
+    fl.l_whence = SEEK_SET;
+    fl.l_len = 0;
+    return fcntl(fd, F_SETLK, &fl);
+}
+
+void AlreadyRunning() {
+    int fd = open(LOCKFILE, O_RDWR | O_CREAT, LOCKMODE);
+    if (fd < 0) {
+        perror("Failed to open PID File");
+        exit(errno);
+    }
+    if (LockFile(fd) < 0) {
+        if (errno == EACCES || errno == EAGAIN) {
+            close(fd);
+            fprintf(stderr, "MyDaemon is already running\n");
+            exit(EXIT_FAILURE);
+        }
+        perror("Failed to lock PID File");
+        exit(EXIT_FAILURE);
+    }
+    PIDFileFD = fd;
+
+    UpdatePIDFile();
+}
 
 /*
  * Initialize logging
@@ -81,18 +139,6 @@ void Daemonize() {
     }
 
     /*
-     * Guarantee the managing terminal can't be changed
-     */
-    struct sigaction sa;
-    sa.sa_handler = SIG_IGN;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGHUP, &sa, NULL) < 0) {
-        syslog(LOG_CRIT, "Failed to ignore signal SIGHUP");
-        exit(1);
-    }
-
-    /*
      * Second fork
      */
     int fork2_status = fork();
@@ -118,10 +164,13 @@ void Daemonize() {
     if (getrlimit(RLIMIT_NOFILE, &rl) < 0) {
         syslog(LOG_CRIT, "Failed to get maximum descriptor number");
     }
-    if (rl.rlim_max == RLIM_INFINITY)
+    if (rl.rlim_max == RLIM_INFINITY) {
         rl.rlim_max = 1024;
+    }
     for (rlim_t i = 0; i < rl.rlim_max; i++) {
-        close((int)i);
+        if ((int)i != PIDFileFD) {
+            close((int)i);
+        }
     }
 
     /*
@@ -135,7 +184,9 @@ void Daemonize() {
         exit(1);
     }
 
-    syslog(LOG_INFO, "MyDaemon was successfully daemonized");
+    UpdatePIDFile();
+
+    syslog(LOG_INFO, "MyDaemon was successfully daemonized (PID=%d)", getpid());
 }
 
 int main(int argc, char** argv) {
@@ -145,16 +196,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    AlreadyRunning();
+
+    signal(SIGHUP, SignalSIGHUPHandler);
+
     InitializeLogging(argv[0]);
 
     syslog(LOG_INFO, "MyDaemon has started");
 
     int server_fd = ConnectToServer();
 
+    Daemonize();
+
     const char* file_path = argv[1];
     StartMonitoring(file_path, server_fd);
 
+    close(PIDFileFD);
     close(server_fd);
-//    Daemonize();
-  //  sleep(100);
+    return 0;
 }

@@ -1,0 +1,22 @@
+[Unit]
+Description=MyDaemon
+After=syslog.target
+Requires=syslog.target
+
+[Service]
+Type=forking
+PIDFile=/tmp/MyDaemon.pid
+WorkingDirectory=/
+
+User=MyDaemon
+Group=MyDaemon
+
+OOMScoreAdjust=-1000
+
+ExecStart=/usr/local/bin/bundle exec service -C /work/www/myunit/shared/config/service.rb --daemon
+ExecStop=/usr/local/bin/bundle exec service -S /work/www/myunit/shared/tmp/pids/service.state stop
+ExecReload=/usr/local/bin/bundle exec service -S /work/www/myunit/shared/tmp/pids/service.state restart
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target
