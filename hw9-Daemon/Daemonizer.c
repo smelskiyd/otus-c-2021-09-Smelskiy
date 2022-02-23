@@ -84,11 +84,6 @@ void SignalSIGHUPHandler(int signal_id) {
  */
 void Daemonize() {
     /*
-     * Lock PID file and verify that daemon isn't already running
-     */
-    LockPIDFile();
-
-    /*
      * Reset initial process mask
      */
     umask(0);
@@ -166,7 +161,7 @@ void Daemonize() {
     }
 
     /*
-     * PID file has changed after forking
+     * Lock PID file and verify that daemon isn't already running
      */
-    UpdatePIDFile();
+    LockPIDFile();
 }
