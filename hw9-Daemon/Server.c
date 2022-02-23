@@ -70,13 +70,13 @@ int main(int argc, char** argv) {
 
             int bytes_read = 0;
             while (bytes_read < bytes_received) {
-                if (bytes_read + (int)sizeof(file_size_t) > bytes_received) {
+                if (bytes_read + (int)sizeof(ssize_t) > bytes_received) {
                     fprintf(stderr, "Received message in incorrect format.\n");
                     return EXIT_FAILURE;
                 }
 
-                const file_size_t* file_size = (const file_size_t*)&buffer[bytes_read];
-                printf("File size has changed to `%lld` bytes.\n", *file_size);
+                const ssize_t* file_size = (const ssize_t*)&buffer[bytes_read];
+                printf("File size has changed to `%ld` bytes.\n", *file_size);
                 bytes_read += sizeof(file_size_t);
             }
         } while (1);

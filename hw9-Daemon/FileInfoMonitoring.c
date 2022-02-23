@@ -66,6 +66,7 @@ void StartMonitoring(const char* file_path, int server_fd) {
 
     char buffer[MAX_MSG_LENGTH];
 
+    ssize_t last_file_size = -1;
     int len;
     do {
         len = read(fd, buffer, MAX_MSG_LENGTH);
@@ -80,9 +81,12 @@ void StartMonitoring(const char* file_path, int server_fd) {
             struct inotify_event* event = (struct inotify_event*)(&buffer[pos]);
 
             if (event->mask & (IN_MODIFY | IN_DELETE)) {
-                syslog(LOG_INFO, "File '%s' was changed, new file size is = %lld", file_path, GetFileSize(file_path));
-
-                SendMessageToServer(server_fd, GetFileSize(file_path));
+                ssize_t new_file_size = GetFileSize(file_path);
+                if (new_file_size != last_file_size) {
+                    syslog(LOG_INFO, "File '%s' was changed, new file size is = %ld", file_path, new_file_size);
+                    SendMessageToServer(server_fd, GetFileSize(file_path));
+                    last_file_size = new_file_size;
+                }
             } else {
                 syslog(LOG_WARNING, "Undefined event from inotify, mask = %d", event->mask);
             }
