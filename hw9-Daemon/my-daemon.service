@@ -13,9 +13,7 @@ Group=MyDaemon
 
 OOMScoreAdjust=-1000
 
-ExecStart=/usr/local/bin/bundle exec service -C /work/www/myunit/shared/config/service.rb --daemon
-ExecStop=/usr/local/bin/bundle exec service -S /work/www/myunit/shared/tmp/pids/service.state stop
-ExecReload=/usr/local/bin/bundle exec service -S /work/www/myunit/shared/tmp/pids/service.state restart
+ExecStart=/usr/local/bin/bundle
 TimeoutSec=300
 
 [Install]
